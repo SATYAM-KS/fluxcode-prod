@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useMemo, useState, useEffect, useTransition } from "react";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -42,13 +42,35 @@ export function RefundRequestButton({
   const [otherReason, setOtherReason] = useState("");
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  const eligible = useMemo(() => {
-    if (!purchasedAt) return true; // no timestamp = old enrollment, treat as eligible
+  const deadline = useMemo(() => {
+    if (!purchasedAt) return null;
     const p = new Date(purchasedAt);
-    if (Number.isNaN(p.getTime())) return true;
-    const deadline = p.getTime() + REFUND_WINDOW_HOURS * 60 * 60 * 1000;
-    return Date.now() <= deadline;
+    if (Number.isNaN(p.getTime())) return null;
+    return p.getTime() + REFUND_WINDOW_HOURS * 60 * 60 * 1000;
   }, [purchasedAt]);
+
+  const [msLeft, setMsLeft] = useState<number>(() =>
+    deadline ? Math.max(0, deadline - Date.now()) : Infinity
+  );
+
+  useEffect(() => {
+    if (!deadline) return;
+    const tick = () => setMsLeft(Math.max(0, deadline - Date.now()));
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, [deadline]);
+
+  const eligible = msLeft > 0;
+
+  const countdown = useMemo(() => {
+    if (msLeft === Infinity) return null;
+    const totalSec = Math.floor(msLeft / 1000);
+    const h = Math.floor(totalSec / 3600);
+    const m = Math.floor((totalSec % 3600) / 60);
+    const s = totalSec % 60;
+    return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+  }, [msLeft]);
 
   const alreadyRefunded = !!refundedAt || refundStatus === "processed";
 
@@ -60,7 +82,7 @@ export function RefundRequestButton({
     <AlertDialog open={open} onOpenChange={setOpen}>
       <AlertDialogTrigger asChild>
         <Button variant="outline" className="mt-3 w-full">
-          Request Refund (72h)
+          Request Refund{countdown ? ` (${countdown})` : " (72h)"}
         </Button>
       </AlertDialogTrigger>
 
