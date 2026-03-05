@@ -45,7 +45,13 @@ export async function POST(req: Request) {
     // Insert enrollment (idempotent-ish: ignore duplicate via unique constraint if present)
     const { error: enrollError } = await supabase
       .from("enrollments")
-      .insert({ user_id: user.id, course_id: courseId });
+      .insert({
+        user_id: user.id,
+        course_id: courseId,
+        purchased_at: new Date().toISOString(),
+        razorpay_order_id,
+        razorpay_payment_id,
+      });
 
     if (enrollError) {
       return NextResponse.json(

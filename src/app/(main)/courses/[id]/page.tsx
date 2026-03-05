@@ -16,6 +16,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin-client";
 import { Button } from "@/components/ui/button";
 import { RazorpayEnrollButton } from "@/components/razorpay-enroll-button";
+import { RefundRequestButton } from "@/components/refund-request-button";
 import { isAdmin } from "@/lib/supabase/get-user-role";
 
 export const dynamic = "force-dynamic";
@@ -69,6 +70,7 @@ async function getCourseData(id: string) {
   const user = userData?.user ?? null;
 
   let isEnrolled = false;
+  let enrollmentMeta: { purchased_at: string | null; refund_requested_at: string | null } | null = null;
   if (user) {
     // Admins get automatic access to every course
     const adminUser = await isAdmin(user.id);
@@ -77,11 +79,17 @@ async function getCourseData(id: string) {
     } else {
       const { data: enrollment } = await supabase
         .from("enrollments")
-        .select("id")
+        .select("id, purchased_at, refund_requested_at")
         .eq("user_id", user.id)
         .eq("course_id", id)
         .maybeSingle();
       isEnrolled = !!enrollment;
+      enrollmentMeta = enrollment
+        ? {
+          purchased_at: (enrollment as any).purchased_at ?? null,
+          refund_requested_at: (enrollment as any).refund_requested_at ?? null,
+        }
+        : null;
     }
   }
 
@@ -94,7 +102,7 @@ async function getCourseData(id: string) {
     ),
   }));
 
-  return { course: course as CourseDetail, sections, user, isEnrolled };
+  return { course: course as CourseDetail, sections, user, isEnrolled, enrollmentMeta };
 }
 
 /* ─── Metadata ──────────────────────────────────────────────────── */
@@ -159,7 +167,7 @@ export default async function CourseDetailPage({
   const data = await getCourseData(params.id);
   if (!data) notFound();
 
-  const { course, sections, user, isEnrolled } = data;
+  const { course, sections, user, isEnrolled, enrollmentMeta } = data;
 
   const totalLessons = sections.reduce((acc, s) => acc + s.lessons.length, 0);
   const totalSeconds = sections.reduce(
@@ -417,9 +425,16 @@ export default async function CourseDetailPage({
 
                 {/* Enrollment status badge */}
                 {isEnrolled && (
-                  <div className="mt-5 flex items-center justify-center gap-2 rounded-lg bg-green-500/10 px-3 py-2 text-sm font-medium text-green-600 dark:text-green-400">
-                    <CheckCircle className="h-4 w-4" />
-                    You&apos;re enrolled
+                  <div className="mt-5">
+                    <div className="flex items-center justify-center gap-2 rounded-lg bg-green-500/10 px-3 py-2 text-sm font-medium text-green-600 dark:text-green-400">
+                      <CheckCircle className="h-4 w-4" />
+                      You&apos;re enrolled
+                    </div>
+                    <RefundRequestButton
+                      courseId={course.id}
+                      purchasedAt={enrollmentMeta?.purchased_at ?? null}
+                      refundRequestedAt={enrollmentMeta?.refund_requested_at ?? null}
+                    />
                   </div>
                 )}
               </div>

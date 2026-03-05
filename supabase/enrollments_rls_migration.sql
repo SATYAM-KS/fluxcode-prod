@@ -29,6 +29,14 @@ CREATE POLICY "Users can insert own enrollments"
   FOR INSERT
   WITH CHECK (auth.uid() = user_id);
 
+-- Users can request a refund on their own enrollments
+DROP POLICY IF EXISTS "Users can request refund" ON public.enrollments;
+CREATE POLICY "Users can request refund"
+  ON public.enrollments
+  FOR UPDATE
+  USING (auth.uid() = user_id)
+  WITH CHECK (auth.uid() = user_id);
+
 -- Admins can delete any enrollment
 DROP POLICY IF EXISTS "Admins can delete enrollments" ON public.enrollments;
 CREATE POLICY "Admins can delete enrollments"

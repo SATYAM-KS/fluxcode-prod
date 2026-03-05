@@ -39,7 +39,11 @@ export async function POST(req: Request) {
     if (course.price === 0) {
       const { error: enrollError } = await supabase
         .from("enrollments")
-        .insert({ user_id: user.id, course_id: course.id });
+        .insert({
+          user_id: user.id,
+          course_id: course.id,
+          purchased_at: new Date().toISOString(),
+        });
 
       if (enrollError) {
         return NextResponse.json(
