@@ -14,23 +14,14 @@ create table if not exists public.coupons (
 -- RLS
 alter table public.coupons enable row level security;
 
--- Only admins can manage coupons (service role bypasses RLS)
-create policy "Admins can manage coupons"
-  on public.coupons
-  for all
-  using (
-    exists (
-      select 1 from public.user_roles
-      where user_id = auth.uid() and role = 'admin'
-    )
-  );
-
--- Authenticated users can read active coupons (for validation UI)
+-- Authenticated users can read coupons (needed for client-side validation)
 create policy "Authenticated users can read coupons"
   on public.coupons
   for select
   to authenticated
   using (true);
+
+-- Coupon inserts/updates/deletes are handled via service role (admin API) only
 
 -- Example seed coupon (remove or modify in production)
 -- insert into public.coupons (code, discount_type, discount_value)
