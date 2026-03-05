@@ -633,7 +633,7 @@ function YouTubePlayer({
           })()}
 
           {/* Bottom row */}
-          <div className="mx-4 flex items-center gap-3 text-white">
+          <div className="mx-2 flex items-center gap-1.5 text-white sm:mx-4 sm:gap-3">
             {/* Play / Pause */}
             <button
               onClick={togglePlay}
@@ -670,19 +670,19 @@ function YouTubePlayer({
               <VolumeIcon className="h-4 w-4" />
             </button>
 
-            {/* Volume slider */}
+            {/* Volume slider — hidden on small screens */}
             <input
               type="range"
               min={0}
               max={100}
               value={muted ? 0 : volume}
               onChange={changeVolume}
-              className="h-1 w-20 cursor-pointer appearance-none rounded-full bg-white/30 accent-primary"
+              className="hidden h-1 w-20 cursor-pointer appearance-none rounded-full bg-white/30 accent-primary sm:block"
               aria-label="Volume"
             />
 
             {/* Timestamp */}
-            <span className="font-mono text-xs text-white/70 tabular-nums">
+            <span className="font-mono text-[10px] text-white/70 tabular-nums sm:text-xs">
               {fmtTime(currentTime)}&nbsp;/&nbsp;{fmtTime(totalDuration)}
             </span>
 
