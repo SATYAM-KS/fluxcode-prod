@@ -66,7 +66,7 @@ export function RefundRequestButton({
         <AlertDialogHeader>
           <AlertDialogTitle>Confirm refund</AlertDialogTitle>
           <AlertDialogDescription>
-            Please select a reason. After confirmation, we will automatically process the refund and revoke access to this course.
+            Please select a reason for your refund. Our team will review your request and process the refund within 3–5 business days.
           </AlertDialogDescription>
         </AlertDialogHeader>
 

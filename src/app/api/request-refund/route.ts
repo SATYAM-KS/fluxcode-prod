@@ -44,7 +44,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Already refunded" }, { status: 400 });
     }
 
-    if (enrollment.refund_requested_at) {
+    if (enrollment.refund_requested_at && enrollment.refund_status === "requested") {
       return NextResponse.json({ error: "Refund already requested" }, { status: 400 });
     }
 
