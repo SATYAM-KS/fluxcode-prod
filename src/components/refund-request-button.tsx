@@ -7,7 +7,6 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
   AlertDialog,
-  AlertDialogAction,
   AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
@@ -39,6 +38,7 @@ export function RefundRequestButton({
     "Bought by mistake" | "Course not as expected" | "Payment issue" | "Other"
   >("Bought by mistake");
   const [otherReason, setOtherReason] = useState("");
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const eligible = useMemo(() => {
     if (!purchasedAt) return false;
@@ -119,12 +119,18 @@ export function RefundRequestButton({
           )}
         </div>
 
+        {errorMsg && (
+          <div className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+            {errorMsg}
+          </div>
+        )}
+
         <AlertDialogFooter>
           <AlertDialogCancel disabled={pending}>Cancel</AlertDialogCancel>
-          <AlertDialogAction
+          <Button
             disabled={pending || !finalReason}
-            onClick={(e) => {
-              e.preventDefault();
+            onClick={() => {
+              setErrorMsg(null);
               startTransition(async () => {
                 try {
                   const resp = await fetch("/api/request-refund", {
@@ -134,7 +140,7 @@ export function RefundRequestButton({
                   });
                   const data = await resp.json();
                   if (!resp.ok) {
-                    toast.error("Refund failed", { description: data?.error });
+                    setErrorMsg(data?.error ?? "Refund failed");
                     return;
                   }
                   setRequested(true);
@@ -143,14 +149,14 @@ export function RefundRequestButton({
                     description: "Your refund has been initiated successfully.",
                   });
                 } catch {
-                  toast.error("Refund failed");
+                  setErrorMsg("Refund failed");
                 }
               });
             }}
           >
             {pending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             Confirm Refund
-          </AlertDialogAction>
+          </Button>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
