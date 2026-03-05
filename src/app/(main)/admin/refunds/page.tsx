@@ -1,4 +1,5 @@
 import { createAdminClient } from "@/lib/supabase/admin-client";
+import { ApproveRefundButton } from "@/components/admin/approve-refund-button";
 
 export const dynamic = "force-dynamic";
 
@@ -64,6 +65,7 @@ export default async function AdminRefundsPage() {
                 <th className="px-4 py-3 text-left font-semibold">Payment ID</th>
                 <th className="px-4 py-3 text-left font-semibold">Requested At</th>
                 <th className="px-4 py-3 text-left font-semibold">Status</th>
+                <th className="px-4 py-3 text-left font-semibold">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
@@ -104,6 +106,11 @@ export default async function AdminRefundsPage() {
                     >
                       {r.refund_status ?? "—"}
                     </span>
+                  </td>
+                  <td className="px-4 py-3">
+                    {r.refund_status === "requested" && (
+                      <ApproveRefundButton enrollmentId={r.id} />
+                    )}
                   </td>
                 </tr>
               ))}
