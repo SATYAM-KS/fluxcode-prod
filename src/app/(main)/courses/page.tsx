@@ -29,7 +29,7 @@ export default async function CoursesPage() {
       .from("enrollments")
       .select("course_id")
       .eq("user_id", user.id)
-      .not("refund_status", "eq", "credited");
+      .or("refund_status.is.null,refund_status.neq.credited");
     enrolledIds = new Set((enrollments ?? []).map((e: any) => e.course_id));
   }
 

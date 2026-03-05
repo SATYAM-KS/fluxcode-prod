@@ -48,12 +48,12 @@ async function getRefundRequests(userId: string) {
 async function getEnrolledCoursesWithProgress(userId: string) {
   const supabase = createClient();
 
-  // Get all active enrollments (exclude refunded ones)
+  // Get all active enrollments (exclude credited refunds; include null refund_status)
   const { data: enrollments } = await supabase
     .from("enrollments")
     .select("course_id, refund_status")
     .eq("user_id", userId)
-    .not("refund_status", "eq", "credited");
+    .or("refund_status.is.null,refund_status.neq.credited");
 
   if (!enrollments || enrollments.length === 0) return [];
 
