@@ -1,4 +1,5 @@
-import { BookOpen, Users, TrendingUp } from "lucide-react";
+import Link from "next/link";
+import { BookOpen, Users, TrendingUp, ChevronRight } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
 import { createAdminClient } from "@/lib/supabase/admin-client";
@@ -69,25 +70,31 @@ type StatCardProps = {
   value: number;
   icon: LucideIcon;
   iconClass: string;
+  href: string;
 };
 
-function StatCard({ title, value, icon: Icon, iconClass }: StatCardProps) {
+function StatCard({ title, value, icon: Icon, iconClass, href }: StatCardProps) {
   return (
-    <Card>
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle className="text-sm font-medium text-muted-foreground">
-          {title}
-        </CardTitle>
-        <div
-          className={`flex h-9 w-9 items-center justify-center rounded-full bg-current/10 ${iconClass}`}
-        >
-          <Icon className="h-5 w-5" />
-        </div>
-      </CardHeader>
-      <CardContent>
-        <p className="text-3xl font-bold tracking-tight">{value}</p>
-      </CardContent>
-    </Card>
+    <Link href={href} className="group block">
+      <Card className="transition-colors hover:border-primary/50 hover:bg-card/80">
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardTitle className="text-sm font-medium text-muted-foreground">
+            {title}
+          </CardTitle>
+          <div
+            className={`flex h-9 w-9 items-center justify-center rounded-full bg-current/10 ${iconClass}`}
+          >
+            <Icon className="h-5 w-5" />
+          </div>
+        </CardHeader>
+        <CardContent className="flex items-end justify-between">
+          <p className="text-3xl font-bold tracking-tight">{value}</p>
+          <span className="flex items-center gap-1 text-xs text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100">
+            View all <ChevronRight className="h-3 w-3" />
+          </span>
+        </CardContent>
+      </Card>
+    </Link>
   );
 }
 
@@ -102,18 +109,21 @@ export default async function AdminDashboardPage() {
       value: stats.totalCourses,
       icon: BookOpen,
       iconClass: "text-blue-500",
+      href: "/admin/courses",
     },
     {
       title: "Total Users",
       value: stats.totalUsers,
       icon: Users,
       iconClass: "text-violet-500",
+      href: "/admin/users",
     },
     {
       title: "Total Enrollments",
       value: stats.totalEnrollments,
       icon: TrendingUp,
       iconClass: "text-green-500",
+      href: "/admin/users",
     },
   ];
 
