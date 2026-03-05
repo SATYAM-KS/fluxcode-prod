@@ -145,8 +145,10 @@ export function RefundRequestButton({
                   }
                   setRequested(true);
                   setOpen(false);
-                  toast.success("Refund processed", {
-                    description: "Your refund has been initiated successfully.",
+                  toast.success("Refund request submitted", {
+                    description:
+                      "Your refund request has been received. You will get your refund within 3–5 business days.",
+                    duration: 6000,
                   });
                 } catch {
                   setErrorMsg("Refund failed");
