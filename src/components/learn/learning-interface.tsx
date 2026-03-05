@@ -310,9 +310,35 @@ function YouTubePlayer({
       .then(() => { });
   }, [lesson, userId]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // ── Save position on tab close / navigation ─────────────────
+  useEffect(() => {
+    const handleUnload = () => {
+      if (!lesson || !playerRef.current || !isReadyRef.current) return;
+      try {
+        const pos = playerRef.current.getCurrentTime?.() ?? 0;
+        if (pos > 0) {
+          const supabase = createClient();
+          supabase.from("watch_history").upsert(
+            { user_id: userId, lesson_id: lesson.id, position: pos, updated_at: new Date().toISOString() },
+            { onConflict: "user_id,lesson_id" }
+          );
+        }
+      } catch { }
+    };
+    window.addEventListener("beforeunload", handleUnload);
+    return () => window.removeEventListener("beforeunload", handleUnload);
+  }, [lesson, userId]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // ── Destroy player on unmount ─────────────────────────────────
   useEffect(() => {
     return () => {
+      // Save position on unmount (e.g. lesson switch via Next.js navigation)
+      if (lesson && playerRef.current && isReadyRef.current) {
+        try {
+          const pos = playerRef.current.getCurrentTime?.() ?? 0;
+          if (pos > 0) saveWatchPosition(pos);
+        } catch { }
+      }
       if (playerRef.current) {
         try { playerRef.current.destroy(); } catch { }
         playerRef.current = null;
@@ -320,7 +346,7 @@ function YouTubePlayer({
       isReadyRef.current = false;
       if (savePositionTimerRef.current) clearInterval(savePositionTimerRef.current);
     };
-  }, []);
+  }, [lesson, userId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Progress polling + periodic position save ─────────────────
   useEffect(() => {
@@ -347,7 +373,7 @@ function YouTubePlayer({
         const pos = p.getCurrentTime();
         if (pos > 0) saveWatchPosition(pos);
       } catch { }
-    }, 10000);
+    }, 5000);
     return () => {
       if (pollRef.current) clearInterval(pollRef.current);
       if (savePositionTimerRef.current) clearInterval(savePositionTimerRef.current);
