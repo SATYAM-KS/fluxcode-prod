@@ -1,13 +1,13 @@
 import { BookOpen, Users, TrendingUp } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
-import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin-client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 /* ─── Data fetching ─────────────────────────────────────────────── */
 
 async function getAdminStats() {
-  const supabase = createClient();
+  const admin = createAdminClient();
 
   const [
     { count: totalCourses },
@@ -15,12 +15,12 @@ async function getAdminStats() {
     { count: totalEnrollments },
     { data: recentSignups },
   ] = await Promise.all([
-    supabase.from("courses").select("*", { count: "exact", head: true }),
-    supabase.from("profiles").select("*", { count: "exact", head: true }),
-    supabase.from("enrollments").select("*", { count: "exact", head: true }),
-    supabase
+    admin.from("courses").select("*", { count: "exact", head: true }),
+    admin.from("profiles").select("*", { count: "exact", head: true }),
+    admin.from("enrollments").select("*", { count: "exact", head: true }),
+    admin
       .from("profiles")
-      .select("id, email, avatar_url, role, created_at")
+      .select("id, email, avatar_url, role, created_at, enrollments ( course_id, courses ( title ) )")
       .order("created_at", { ascending: false })
       .limit(8),
   ]);
@@ -120,48 +120,50 @@ export default async function AdminDashboardPage() {
             </div>
           ) : (
             <ul className="divide-y divide-border">
-              {stats.recentSignups.map((profile: {
-                id: string;
-                email: string;
-                avatar_url: string | null;
-                role: string;
-                created_at: string;
-              }) => (
-                <li
-                  key={profile.id}
-                  className="flex items-center justify-between px-6 py-3"
-                >
-                  <div className="flex items-center gap-3">
-                    {profile.avatar_url ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={profile.avatar_url}
-                        alt={profile.email}
-                        className="h-8 w-8 rounded-full object-cover"
-                      />
-                    ) : (
-                      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-sm font-bold text-primary">
-                        {profile.email[0]?.toUpperCase() ?? "?"}
+              {stats.recentSignups.map((profile: any) => {
+                const enrollments: { course_id: string; courses: { title: string } | null }[] =
+                  profile.enrollments ?? [];
+                return (
+                  <li key={profile.id} className="flex items-center justify-between gap-4 px-6 py-3">
+                    <div className="flex min-w-0 items-center gap-3">
+                      {profile.avatar_url ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={profile.avatar_url}
+                          alt={profile.email}
+                          className="h-8 w-8 shrink-0 rounded-full object-cover"
+                        />
+                      ) : (
+                        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-bold text-primary">
+                          {profile.email[0]?.toUpperCase() ?? "?"}
+                        </div>
+                      )}
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-medium leading-none">{profile.email}</p>
+                        <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                          <span className="text-xs capitalize text-muted-foreground">{profile.role}</span>
+                          {enrollments.map((e) => (
+                            <span
+                              key={e.course_id}
+                              className="inline-flex items-center gap-1 rounded-full bg-green-500/10 px-2 py-0.5 text-[10px] font-medium text-green-400"
+                            >
+                              <BookOpen className="h-2.5 w-2.5" />
+                              {e.courses?.title ?? "Unknown"}
+                            </span>
+                          ))}
+                        </div>
                       </div>
-                    )}
-                    <div>
-                      <p className="text-sm font-medium leading-none">
-                        {profile.email}
-                      </p>
-                      <p className="mt-0.5 text-xs capitalize text-muted-foreground">
-                        {profile.role}
-                      </p>
                     </div>
-                  </div>
-                  <time className="shrink-0 text-xs text-muted-foreground">
-                    {new Date(profile.created_at).toLocaleDateString("en-US", {
-                      month: "short",
-                      day: "numeric",
-                      year: "numeric",
-                    })}
-                  </time>
-                </li>
-              ))}
+                    <time className="shrink-0 text-xs text-muted-foreground">
+                      {new Date(profile.created_at).toLocaleDateString("en-US", {
+                        month: "short",
+                        day: "numeric",
+                        year: "numeric",
+                      })}
+                    </time>
+                  </li>
+                );
+              })}
             </ul>
           )}
         </CardContent>

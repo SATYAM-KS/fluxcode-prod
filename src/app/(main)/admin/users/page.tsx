@@ -1,14 +1,17 @@
-import { Users } from "lucide-react";
+import { Users, BookOpen } from "lucide-react";
 
-import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin-client";
 
 export const metadata = { title: "Users – Admin | FluxCode" };
 
 async function getUsers() {
-  const supabase = createClient();
-  const { data } = await supabase
+  const admin = createAdminClient();
+  const { data } = await admin
     .from("profiles")
-    .select("id, email, role, avatar_url, created_at")
+    .select(`
+      id, email, role, avatar_url, created_at,
+      enrollments ( course_id, courses ( title ) )
+    `)
     .order("created_at", { ascending: false });
   return data ?? [];
 }
@@ -35,57 +38,73 @@ export default async function AdminUsersPage() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border bg-muted/40 text-left">
-                <th className="px-4 py-3 font-semibold text-muted-foreground">
-                  User
-                </th>
-                <th className="hidden px-4 py-3 font-semibold text-muted-foreground sm:table-cell">
-                  Role
-                </th>
-                <th className="hidden px-4 py-3 font-semibold text-muted-foreground md:table-cell">
-                  Joined
-                </th>
+                <th className="px-4 py-3 font-semibold text-muted-foreground">User</th>
+                <th className="hidden px-4 py-3 font-semibold text-muted-foreground sm:table-cell">Role</th>
+                <th className="px-4 py-3 font-semibold text-muted-foreground">Enrolled Courses</th>
+                <th className="hidden px-4 py-3 font-semibold text-muted-foreground md:table-cell">Joined</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
-              {users.map((user) => (
-                <tr key={user.id} className="hover:bg-muted/20">
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-3">
-                      {user.avatar_url ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
-                          src={user.avatar_url}
-                          alt={user.email}
-                          className="h-8 w-8 rounded-full object-cover"
-                        />
+              {users.map((user: any) => {
+                const enrollments: { course_id: string; courses: { title: string } | null }[] =
+                  user.enrollments ?? [];
+                return (
+                  <tr key={user.id} className="hover:bg-muted/20">
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-3">
+                        {user.avatar_url ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={user.avatar_url}
+                            alt={user.email}
+                            className="h-8 w-8 rounded-full object-cover"
+                          />
+                        ) : (
+                          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-sm font-bold text-primary">
+                            {user.email[0]?.toUpperCase() ?? "?"}
+                          </div>
+                        )}
+                        <span className="font-medium">{user.email}</span>
+                      </div>
+                    </td>
+                    <td className="hidden px-4 py-3 sm:table-cell">
+                      <span
+                        className={`inline-flex rounded-full px-2 py-0.5 text-xs font-semibold ${
+                          user.role === "admin"
+                            ? "bg-primary/10 text-primary"
+                            : "bg-muted text-muted-foreground"
+                        }`}
+                      >
+                        {user.role}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3">
+                      {enrollments.length === 0 ? (
+                        <span className="text-xs text-muted-foreground">None</span>
                       ) : (
-                        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-sm font-bold text-primary">
-                          {user.email[0]?.toUpperCase() ?? "?"}
+                        <div className="flex flex-wrap gap-1.5">
+                          {enrollments.map((e) => (
+                            <span
+                              key={e.course_id}
+                              className="inline-flex items-center gap-1 rounded-full bg-green-500/10 px-2 py-0.5 text-xs font-medium text-green-400"
+                            >
+                              <BookOpen className="h-3 w-3" />
+                              {e.courses?.title ?? "Unknown"}
+                            </span>
+                          ))}
                         </div>
                       )}
-                      <span className="font-medium">{user.email}</span>
-                    </div>
-                  </td>
-                  <td className="hidden px-4 py-3 sm:table-cell">
-                    <span
-                      className={`inline-flex rounded-full px-2 py-0.5 text-xs font-semibold ${
-                        user.role === "admin"
-                          ? "bg-primary/10 text-primary"
-                          : "bg-muted text-muted-foreground"
-                      }`}
-                    >
-                      {user.role}
-                    </span>
-                  </td>
-                  <td className="hidden px-4 py-3 text-muted-foreground md:table-cell">
-                    {new Date(user.created_at).toLocaleDateString("en-US", {
-                      month: "short",
-                      day: "numeric",
-                      year: "numeric",
-                    })}
-                  </td>
-                </tr>
-              ))}
+                    </td>
+                    <td className="hidden px-4 py-3 text-muted-foreground md:table-cell">
+                      {new Date(user.created_at).toLocaleDateString("en-US", {
+                        month: "short",
+                        day: "numeric",
+                        year: "numeric",
+                      })}
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         )}
