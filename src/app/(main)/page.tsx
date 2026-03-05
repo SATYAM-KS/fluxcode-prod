@@ -44,7 +44,8 @@ async function getPageData(): Promise<{ courses: Course[]; user: User | null; en
     const { data: enrollments } = await supabase
       .from("enrollments")
       .select("course_id")
-      .eq("user_id", user.id);
+      .eq("user_id", user.id)
+      .or("refund_status.is.null,refund_status.neq.credited");
     enrolledIds = new Set((enrollments ?? []).map((e: any) => e.course_id));
   }
 
