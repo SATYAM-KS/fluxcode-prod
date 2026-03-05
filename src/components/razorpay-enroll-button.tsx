@@ -42,6 +42,9 @@ export function RazorpayEnrollButton({
 
   // Called when user clicks "Enroll Now" — for free courses skip modal
   async function onClick() {
+    // Preload Razorpay script in background while modal is open
+    if (coursePrice > 0) loadRazorpayScript();
+
     if (coursePrice === 0) {
       setPaying(true);
       try {
@@ -68,6 +71,7 @@ export function RazorpayEnrollButton({
   async function onProceed(finalAmount: number, couponCode?: string) {
     setModalOpen(false);
     setPaying(true);
+    console.log("[checkout] onProceed called, finalAmount:", finalAmount, "coupon:", couponCode);
 
     try {
       const resp = await fetch("/api/create-order", {

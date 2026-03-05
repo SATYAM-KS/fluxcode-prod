@@ -68,10 +68,11 @@ export async function POST(req: Request) {
       key_secret: keySecret,
     });
 
-    // Use client-supplied finalAmount (post GST + convenience fee - discount) if provided,
-    // but clamp to at least ₹1 to avoid Razorpay rejecting zero-value orders.
-    const chargeAmount = finalAmount && finalAmount > 0 ? finalAmount : course.price;
+    // Use client-supplied finalAmount (post GST + convenience fee - discount) if provided.
+    // Clamp to ₹1 minimum (100 paise) — Razorpay rejects anything below.
+    const chargeAmount = Math.max(1, finalAmount && finalAmount > 0 ? finalAmount : course.price);
     const amountInPaise = Math.round(chargeAmount * 100);
+    console.log("[create-order] chargeAmount:", chargeAmount, "paise:", amountInPaise);
 
     const order = await razorpay.orders.create({
       amount: amountInPaise,
