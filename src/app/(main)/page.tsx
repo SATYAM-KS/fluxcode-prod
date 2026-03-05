@@ -27,7 +27,7 @@ const features = [
   },
 ];
 
-async function getPageData(): Promise<{ courses: Course[]; user: User | null }> {
+async function getPageData(): Promise<{ courses: Course[]; user: User | null; enrolledIds: Set<string> }> {
   const supabase = createClient();
   const [{ data: coursesData }, { data: { user } }] = await Promise.all([
     supabase
@@ -38,11 +38,21 @@ async function getPageData(): Promise<{ courses: Course[]; user: User | null }> 
       .limit(3),
     supabase.auth.getUser(),
   ]);
-  return { courses: coursesData ?? [], user };
+
+  let enrolledIds = new Set<string>();
+  if (user) {
+    const { data: enrollments } = await supabase
+      .from("enrollments")
+      .select("course_id")
+      .eq("user_id", user.id);
+    enrolledIds = new Set((enrollments ?? []).map((e: any) => e.course_id));
+  }
+
+  return { courses: coursesData ?? [], user, enrolledIds };
 }
 
 export default async function Home() {
-  const { courses: featuredCourses, user } = await getPageData();
+  const { courses: featuredCourses, user, enrolledIds } = await getPageData();
 
   return (
     <>
@@ -135,7 +145,7 @@ export default async function Home() {
           {featuredCourses.length > 0 ? (
             <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
               {featuredCourses.map((course) => (
-                <CourseCard key={course.id} course={course} />
+                <CourseCard key={course.id} course={course} isEnrolled={enrolledIds.has(course.id)} />
               ))}
             </div>
           ) : (
