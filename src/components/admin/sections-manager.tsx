@@ -49,6 +49,14 @@ type Lesson = {
   duration?: number | null;
   is_free_preview?: boolean;
   order_index: number;
+  sub_section_id?: string | null;
+};
+
+type SubSection = {
+  id: string;
+  title: string;
+  order_index: number;
+  lessons: Lesson[];
 };
 
 type Section = {
@@ -56,6 +64,7 @@ type Section = {
   title: string;
   order_index: number;
   lessons: Lesson[];
+  sub_sections?: SubSection[];
 };
 
 /* ─── Helpers ───────────────────────────────────────────────────── */
@@ -146,11 +155,13 @@ function LessonEditor({
   onClose,
   onSaved,
   sectionId,
+  subSectionId,
   nextOrderIndex,
 }: {
   mode: "create" | "edit";
   initial?: Lesson;
   sectionId: string;
+  subSectionId?: string;
   nextOrderIndex: number;
   onClose: () => void;
   onSaved: (lesson: Lesson) => void;
@@ -182,6 +193,7 @@ function LessonEditor({
     const supabase = createClient();
     const payload = {
       section_id: sectionId,
+      sub_section_id: subSectionId ?? null,
       title: trimmed,
       description: description.trim() || null,
       drive_video_url: driveUrl.trim() || null,
@@ -421,12 +433,177 @@ function SortableLessonRow({
   );
 }
 
+/* ─── Sub-Section Manager ───────────────────────────────────────── */
+
+function SubSectionBlock({
+  sub,
+  sectionId,
+  onDelete,
+  onUpdate,
+}: {
+  sub: SubSection;
+  sectionId: string;
+  onDelete: (id: string) => void;
+  onUpdate: (id: string, lessons: Lesson[]) => void;
+}) {
+  const [lessons, setLessons] = useState<Lesson[]>(
+    [...(sub.lessons ?? [])].sort((a, b) => a.order_index - b.order_index)
+  );
+  const [editorOpen, setEditorOpen] = useState(false);
+  const [editingLesson, setEditingLesson] = useState<Lesson | null>(null);
+  const [editing, setEditing] = useState(false);
+  const [titleVal, setTitleVal] = useState(sub.title);
+  const [savingTitle, setSavingTitle] = useState(false);
+  const [confirming, setConfirming] = useState(false);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+  );
+
+  async function saveTitle() {
+    const t = titleVal.trim();
+    if (!t || t === sub.title) { setEditing(false); return; }
+    setSavingTitle(true);
+    const supabase = createClient();
+    const { error } = await supabase.from("sub_sections").update({ title: t }).eq("id", sub.id);
+    setSavingTitle(false);
+    if (error) { toast.error("Failed to update sub-section title"); return; }
+    sub.title = t;
+    setEditing(false);
+  }
+
+  async function handleDragEnd(event: DragEndEvent) {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    const oldIdx = lessons.findIndex((l) => l.id === active.id);
+    const newIdx = lessons.findIndex((l) => l.id === over.id);
+    const reordered = arrayMove(lessons, oldIdx, newIdx);
+    const prev = lessons;
+    setLessons(reordered);
+    const supabase = createClient();
+    const results = await Promise.all(
+      reordered.map((l, i) => supabase.from("lessons").update({ order_index: i }).eq("id", l.id))
+    );
+    if (results.some((r) => r.error)) { setLessons(prev); toast.error("Failed to save lesson order"); }
+    else { onUpdate(sub.id, reordered); }
+  }
+
+  async function deleteLesson(id: string) {
+    const supabase = createClient();
+    const { error } = await supabase.from("lessons").delete().eq("id", id);
+    if (error) { toast.error("Failed to delete lesson"); return; }
+    const next = lessons.filter((l) => l.id !== id);
+    setLessons(next);
+    onUpdate(sub.id, next);
+    toast.success("Lesson deleted");
+  }
+
+  function upsertLesson(saved: Lesson) {
+    setLessons((prev) => {
+      const idx = prev.findIndex((l) => l.id === saved.id);
+      const next = idx === -1 ? [...prev, saved] : prev.map((l, i) => i === idx ? saved : l);
+      const sorted = next.sort((a, b) => a.order_index - b.order_index);
+      onUpdate(sub.id, sorted);
+      return sorted;
+    });
+  }
+
+  return (
+    <div className="ml-4 mt-2 rounded-lg border border-dashed border-border bg-muted/10">
+      {/* Sub-section header */}
+      <div className="flex items-center gap-2 px-3 py-2">
+        <div className="h-2 w-2 shrink-0 rounded-full bg-primary/40" />
+        {editing ? (
+          <div className="flex flex-1 items-center gap-2">
+            <input
+              autoFocus
+              value={titleVal}
+              onChange={(e) => setTitleVal(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter") saveTitle(); if (e.key === "Escape") { setEditing(false); setTitleVal(sub.title); } }}
+              disabled={savingTitle}
+              className="h-7 flex-1 rounded border border-input bg-background px-2 text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+            />
+            <button onClick={saveTitle} disabled={savingTitle} className="text-green-500 hover:text-green-400">
+              {savingTitle ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
+            </button>
+            <button onClick={() => { setEditing(false); setTitleVal(sub.title); }} className="text-muted-foreground hover:text-foreground">
+              <X className="h-3.5 w-3.5" />
+            </button>
+          </div>
+        ) : (
+          <>
+            <button onClick={() => setEditing(true)} className="flex-1 text-left text-xs font-semibold text-muted-foreground hover:text-foreground">
+              {sub.title}
+            </button>
+            <span className="text-[10px] text-muted-foreground">{lessons.length} lesson{lessons.length !== 1 ? "s" : ""}</span>
+            <button
+              onClick={() => { setEditingLesson(null); setEditorOpen(true); }}
+              className="inline-flex items-center gap-1 rounded-md border border-border px-2 py-1 text-[10px] font-medium hover:bg-accent"
+            >
+              <Plus className="h-3 w-3" /> Add Lesson
+            </button>
+            {confirming ? (
+              <div className="flex items-center gap-1">
+                <button onClick={() => { onDelete(sub.id); setConfirming(false); }} className="text-destructive hover:text-destructive/70"><Check className="h-3.5 w-3.5" /></button>
+                <button onClick={() => setConfirming(false)} className="text-muted-foreground hover:text-foreground"><X className="h-3.5 w-3.5" /></button>
+              </div>
+            ) : (
+              <button onClick={() => setConfirming(true)} className="text-muted-foreground/40 hover:text-destructive"><Trash2 className="h-3.5 w-3.5" /></button>
+            )}
+          </>
+        )}
+      </div>
+
+      {/* Lessons inside sub-section */}
+      <div className="px-3 pb-3">
+        {lessons.length === 0 ? (
+          <p className="text-[11px] text-muted-foreground">No lessons yet. Click "Add Lesson" above.</p>
+        ) : (
+          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd} modifiers={[restrictToVerticalAxis]}>
+            <SortableContext items={lessons.map((l) => l.id)} strategy={verticalListSortingStrategy}>
+              <ul className="space-y-1.5">
+                {lessons.map((lesson) => (
+                  <SortableLessonRow
+                    key={lesson.id}
+                    lesson={lesson}
+                    onEdit={() => { setEditingLesson(lesson); setEditorOpen(true); }}
+                    onDelete={() => deleteLesson(lesson.id)}
+                  />
+                ))}
+              </ul>
+            </SortableContext>
+          </DndContext>
+        )}
+      </div>
+
+      {editorOpen && (
+        <LessonEditor
+          mode={editingLesson ? "edit" : "create"}
+          initial={editingLesson ?? undefined}
+          sectionId={sectionId}
+          subSectionId={sub.id}
+          nextOrderIndex={lessons.length}
+          onClose={() => setEditorOpen(false)}
+          onSaved={upsertLesson}
+        />
+      )}
+    </div>
+  );
+}
+
 /* ─── Lessons Manager ───────────────────────────────────────────── */
 
 function LessonsManager({ section }: { section: Section }) {
   const [lessons, setLessons] = useState<Lesson[]>(
-    [...(section.lessons ?? [])].sort((a, b) => a.order_index - b.order_index)
+    [...(section.lessons ?? [])].filter((l) => !l.sub_section_id).sort((a, b) => a.order_index - b.order_index)
   );
+  const [subSections, setSubSections] = useState<SubSection[]>(
+    [...(section.sub_sections ?? [])].sort((a, b) => a.order_index - b.order_index)
+  );
+  const [addingSubSection, setAddingSubSection] = useState(false);
+  const [newSubTitle, setNewSubTitle] = useState("");
+  const [savingSubSection, setSavingSubSection] = useState(false);
   const [editorOpen, setEditorOpen] = useState(false);
   const [editingLesson, setEditingLesson] = useState<Lesson | null>(null);
 
@@ -434,6 +611,31 @@ function LessonsManager({ section }: { section: Section }) {
     useSensor(PointerSensor),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   );
+
+  async function addSubSection() {
+    if (!newSubTitle.trim()) return;
+    setSavingSubSection(true);
+    const supabase = createClient();
+    const { data, error } = await supabase
+      .from("sub_sections")
+      .insert({ section_id: section.id, title: newSubTitle.trim(), order_index: subSections.length })
+      .select("id, title, order_index")
+      .single();
+    setSavingSubSection(false);
+    if (error || !data) { toast.error("Failed to add sub-section"); return; }
+    setSubSections((prev) => [...prev, { ...data, lessons: [] }]);
+    setNewSubTitle("");
+    setAddingSubSection(false);
+    toast.success("Sub-section added");
+  }
+
+  function deleteSubSection(id: string) {
+    setSubSections((prev) => prev.filter((s) => s.id !== id));
+  }
+
+  function updateSubSectionLessons(id: string, lessons: Lesson[]) {
+    setSubSections((prev) => prev.map((s) => s.id === id ? { ...s, lessons } : s));
+  }
 
   async function handleLessonDragEnd(event: DragEndEvent) {
     const { active, over } = event;
@@ -481,52 +683,74 @@ function LessonsManager({ section }: { section: Section }) {
   }
 
   return (
-    <div className="border-t border-border bg-muted/20 px-4 pb-4 pt-3">
-      <div className="mb-3 flex items-center justify-between">
-        <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-          Lessons
-        </p>
-        <Button
-          size="sm"
-          variant="outline"
-          onClick={() => {
-            setEditingLesson(null);
-            setEditorOpen(true);
-          }}
-        >
-          <Plus className="h-4 w-4" />
-          Add Lesson
-        </Button>
+    <div className="border-t border-border bg-muted/20 px-4 pb-4 pt-3 space-y-4">
+      {/* Direct lessons (no sub-section) */}
+      <div>
+        <div className="mb-3 flex items-center justify-between">
+          <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Lessons</p>
+          <div className="flex items-center gap-2">
+            <Button size="sm" variant="outline" onClick={() => { setAddingSubSection(true); }}>
+              <Plus className="h-4 w-4" />
+              Add Sub-section
+            </Button>
+            <Button size="sm" variant="outline" onClick={() => { setEditingLesson(null); setEditorOpen(true); }}>
+              <Plus className="h-4 w-4" />
+              Add Lesson
+            </Button>
+          </div>
+        </div>
+
+        {lessons.length === 0 && subSections.length === 0 && !addingSubSection ? (
+          <p className="text-xs text-muted-foreground">No lessons in this section yet.</p>
+        ) : lessons.length > 0 ? (
+          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleLessonDragEnd} modifiers={[restrictToVerticalAxis]}>
+            <SortableContext items={lessons.map((l) => l.id)} strategy={verticalListSortingStrategy}>
+              <ul className="space-y-2">
+                {lessons.map((lesson) => (
+                  <SortableLessonRow
+                    key={lesson.id}
+                    lesson={lesson}
+                    onEdit={() => { setEditingLesson(lesson); setEditorOpen(true); }}
+                    onDelete={() => deleteLesson(lesson.id)}
+                  />
+                ))}
+              </ul>
+            </SortableContext>
+          </DndContext>
+        ) : null}
       </div>
 
-      {lessons.length === 0 ? (
-        <p className="text-xs text-muted-foreground">No lessons in this section yet.</p>
-      ) : (
-        <DndContext
-          sensors={sensors}
-          collisionDetection={closestCenter}
-          onDragEnd={handleLessonDragEnd}
-          modifiers={[restrictToVerticalAxis]}
-        >
-          <SortableContext
-            items={lessons.map((l) => l.id)}
-            strategy={verticalListSortingStrategy}
-          >
-            <ul className="space-y-2">
-              {lessons.map((lesson) => (
-                <SortableLessonRow
-                  key={lesson.id}
-                  lesson={lesson}
-                  onEdit={() => {
-                    setEditingLesson(lesson);
-                    setEditorOpen(true);
-                  }}
-                  onDelete={() => deleteLesson(lesson.id)}
-                />
-              ))}
-            </ul>
-          </SortableContext>
-        </DndContext>
+      {/* Sub-sections */}
+      {subSections.map((sub) => (
+        <SubSectionBlock
+          key={sub.id}
+          sub={sub}
+          sectionId={section.id}
+          onDelete={deleteSubSection}
+          onUpdate={updateSubSectionLessons}
+        />
+      ))}
+
+      {/* Add sub-section inline form */}
+      {addingSubSection && (
+        <div className="flex items-center gap-2 rounded-lg border border-primary/40 bg-muted/20 px-3 py-2">
+          <input
+            autoFocus
+            value={newSubTitle}
+            onChange={(e) => setNewSubTitle(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter") addSubSection(); if (e.key === "Escape") { setAddingSubSection(false); setNewSubTitle(""); } }}
+            placeholder="Sub-section title…"
+            disabled={savingSubSection}
+            className="flex-1 rounded border border-input bg-background px-3 py-1.5 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          />
+          <Button size="sm" onClick={addSubSection} disabled={savingSubSection || !newSubTitle.trim()}>
+            {savingSubSection ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+            Save
+          </Button>
+          <Button size="sm" variant="ghost" onClick={() => { setAddingSubSection(false); setNewSubTitle(""); }} disabled={savingSubSection}>
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
       )}
 
       {editorOpen && (
