@@ -1,6 +1,7 @@
 import { Users, BookOpen } from "lucide-react";
 
 import { createAdminClient } from "@/lib/supabase/admin-client";
+import { createClient } from "@/lib/supabase/server";
 
 export const metadata = { title: "Users – Admin | FluxCode" };
 
@@ -19,9 +20,11 @@ async function getUsers() {
 
   // Fetch course titles for all enrolled course_ids
   const courseIds = [...new Set((allEnrollments ?? []).map((e: any) => e.course_id))];
-  const { data: courses } = courseIds.length
-    ? await admin.from("courses").select("id, title").in("id", courseIds)
-    : { data: [] };
+  const supabase = createClient();
+  const coursesResult = courseIds.length
+    ? await supabase.from("courses").select("id, title").in("id", courseIds)
+    : { data: [], error: null };
+  const { data: courses } = coursesResult;
   const courseMap: Record<string, string> = {};
   for (const c of courses ?? []) courseMap[c.id] = c.title;
 

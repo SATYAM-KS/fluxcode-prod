@@ -2,6 +2,7 @@ import { BookOpen, Users, TrendingUp } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
 import { createAdminClient } from "@/lib/supabase/admin-client";
+import { createClient } from "@/lib/supabase/server";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 /* ─── Data fetching ─────────────────────────────────────────────── */
@@ -31,8 +32,9 @@ async function getAdminStats() {
 
   // Fetch course titles for all enrolled course_ids
   const courseIds = [...new Set((allEnrollments ?? []).map((e: any) => e.course_id))];
+  const supabase = createClient();
   const { data: courses } = courseIds.length
-    ? await admin.from("courses").select("id, title").in("id", courseIds)
+    ? await supabase.from("courses").select("id, title").in("id", courseIds)
     : { data: [] };
   const courseMap: Record<string, string> = {};
   for (const c of courses ?? []) courseMap[c.id] = c.title;
