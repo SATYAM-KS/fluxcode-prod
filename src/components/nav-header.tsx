@@ -15,12 +15,12 @@ export async function NavHeader() {
 
   return (
     <header className="sticky top-0 z-40 border-b border-border bg-background">
-      <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-4">
+      <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-4 relative">
         <Link href="/" className="text-base font-bold tracking-tight">
           Flux<span className="text-primary">Code</span>
         </Link>
 
-        <nav className="hidden items-center gap-6 text-sm font-medium sm:flex">
+        <nav className="hidden items-center gap-6 text-sm font-medium sm:flex absolute left-1/2 -translate-x-1/2">
           <Link href="/" className="text-muted-foreground transition-colors hover:text-foreground">
             Home
           </Link>
