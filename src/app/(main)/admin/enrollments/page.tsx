@@ -7,8 +7,11 @@ export const metadata = { title: "Enrollments – Admin | FluxCode" };
 async function getEnrollments() {
   const supabase = createClient();
 
+  const enrollmentsResult = await supabase.from("enrollments").select("user_id, course_id, created_at").order("created_at", { ascending: false });
+  console.log("[admin/enrollments] data:", enrollmentsResult.data, "error:", enrollmentsResult.error, "status:", enrollmentsResult.status);
+
   const [{ data: allEnrollments }, { data: profiles }] = await Promise.all([
-    supabase.from("enrollments").select("user_id, course_id, created_at").order("created_at", { ascending: false }),
+    Promise.resolve(enrollmentsResult),
     supabase.from("profiles").select("id, email, avatar_url, role"),
   ]);
 
