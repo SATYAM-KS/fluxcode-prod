@@ -6,14 +6,31 @@ export const metadata = { title: "Users – Admin | FluxCode" };
 
 async function getUsers() {
   const admin = createAdminClient();
-  const { data } = await admin
-    .from("profiles")
-    .select(`
-      id, email, role, avatar_url, created_at,
-      enrollments ( course_id, courses ( title ) )
-    `)
-    .order("created_at", { ascending: false });
-  return data ?? [];
+
+  const [{ data: profiles }, { data: allEnrollments }] = await Promise.all([
+    admin
+      .from("profiles")
+      .select("id, email, role, avatar_url, created_at")
+      .order("created_at", { ascending: false }),
+    admin
+      .from("enrollments")
+      .select("user_id, course_id, courses ( title )"),
+  ]);
+
+  // Merge enrollments into each profile
+  const enrollmentsByUser: Record<string, { course_id: string; title: string }[]> = {};
+  for (const e of allEnrollments ?? []) {
+    if (!enrollmentsByUser[e.user_id]) enrollmentsByUser[e.user_id] = [];
+    enrollmentsByUser[e.user_id].push({
+      course_id: e.course_id,
+      title: (e.courses as any)?.title ?? "Unknown",
+    });
+  }
+
+  return (profiles ?? []).map((p) => ({
+    ...p,
+    enrollments: enrollmentsByUser[p.id] ?? [],
+  }));
 }
 
 export default async function AdminUsersPage() {

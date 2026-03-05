@@ -14,22 +14,41 @@ async function getAdminStats() {
     { count: totalUsers },
     { count: totalEnrollments },
     { data: recentSignups },
+    { data: allEnrollments },
   ] = await Promise.all([
     admin.from("courses").select("*", { count: "exact", head: true }),
     admin.from("profiles").select("*", { count: "exact", head: true }),
     admin.from("enrollments").select("*", { count: "exact", head: true }),
     admin
       .from("profiles")
-      .select("id, email, avatar_url, role, created_at, enrollments ( course_id, courses ( title ) )")
+      .select("id, email, avatar_url, role, created_at")
       .order("created_at", { ascending: false })
       .limit(8),
+    admin
+      .from("enrollments")
+      .select("user_id, course_id, courses ( title )"),
   ]);
+
+  // Merge enrollments into each profile
+  const enrollmentsByUser: Record<string, { course_id: string; title: string }[]> = {};
+  for (const e of allEnrollments ?? []) {
+    if (!enrollmentsByUser[e.user_id]) enrollmentsByUser[e.user_id] = [];
+    enrollmentsByUser[e.user_id].push({
+      course_id: e.course_id,
+      title: (e.courses as any)?.title ?? "Unknown",
+    });
+  }
+
+  const signupsWithEnrollments = (recentSignups ?? []).map((p: any) => ({
+    ...p,
+    enrollments: enrollmentsByUser[p.id] ?? [],
+  }));
 
   return {
     totalCourses: totalCourses ?? 0,
     totalUsers: totalUsers ?? 0,
     totalEnrollments: totalEnrollments ?? 0,
-    recentSignups: recentSignups ?? [],
+    recentSignups: signupsWithEnrollments,
   };
 }
 
