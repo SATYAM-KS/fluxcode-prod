@@ -199,8 +199,9 @@ export default async function DashboardPage() {
           </h2>
           <div className="space-y-3">
             {refundRequests.map((r: any) => {
-              const isProcessed = r.refund_status === "processed";
-              const isUnderReview = r.refund_status === "under_review";
+              const isCredited = r.refund_status === "credited";
+              const isProcessed = r.refund_status === "processed" || isCredited;
+              const isUnderReview = r.refund_status === "under_review" || isProcessed;
               const isFailed = r.refund_status === "failed";
 
               const steps = [
@@ -211,19 +212,19 @@ export default async function DashboardPage() {
                 },
                 {
                   label: "Under Review",
-                  done: isUnderReview || isProcessed || isFailed,
-                  active: isUnderReview,
+                  done: isUnderReview || isFailed,
+                  active: r.refund_status === "under_review",
                 },
                 {
                   label: "Processed",
                   done: isProcessed,
-                  active: false,
+                  active: r.refund_status === "processed",
                   failed: isFailed,
                 },
                 {
                   label: "Amount Credited",
-                  done: false,
-                  active: isProcessed,
+                  done: isCredited,
+                  active: !isCredited && isProcessed,
                 },
               ];
 
@@ -231,12 +232,14 @@ export default async function DashboardPage() {
                 requested: "bg-yellow-500/10 text-yellow-600 dark:text-yellow-400 border-yellow-500/30",
                 under_review: "bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/30",
                 processed: "bg-green-500/10 text-green-600 dark:text-green-400 border-green-500/30",
+                credited: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30",
                 failed: "bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/30",
               };
               const statusLabels: Record<string, string> = {
                 requested: "Requested",
                 under_review: "Under Review",
                 processed: "Processed",
+                credited: "Amount Credited",
                 failed: "Failed",
               };
 

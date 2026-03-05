@@ -5,7 +5,7 @@ import { CheckCircle, Clock, Loader2, Search } from "lucide-react";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 
-type Stage = "requested" | "under_review" | "processed" | string;
+type Stage = "requested" | "under_review" | "processed" | "credited" | string;
 
 async function updateRefundStatus(enrollmentId: string, status: string) {
   const resp = await fetch("/api/approve-refund", {
@@ -42,11 +42,11 @@ export function RefundActionsCell({
     });
   }
 
-  if (status === "processed") {
+  if (status === "credited") {
     return (
       <span className="inline-flex items-center gap-1 text-xs font-semibold text-green-500">
         <CheckCircle className="h-3.5 w-3.5" />
-        Refund Done
+        Amount Credited
       </span>
     );
   }
@@ -71,6 +71,16 @@ export function RefundActionsCell({
         >
           {pending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CheckCircle className="h-3.5 w-3.5" />}
           Mark Processed
+        </button>
+      )}
+      {status === "processed" && (
+        <button
+          disabled={pending}
+          onClick={() => move("credited", "Amount Credited")}
+          className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-3 py-1.5 text-xs font-semibold text-emerald-600 transition-colors hover:bg-emerald-500/20 disabled:opacity-50 dark:text-emerald-400"
+        >
+          {pending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Clock className="h-3.5 w-3.5" />}
+          Mark Amount Credited
         </button>
       )}
     </div>

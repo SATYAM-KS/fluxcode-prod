@@ -36,6 +36,7 @@ const STATUS_STYLES: Record<string, string> = {
   requested: "bg-yellow-500/10 text-yellow-600 dark:text-yellow-400 border-yellow-500/30",
   under_review: "bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/30",
   processed: "bg-green-500/10 text-green-600 dark:text-green-400 border-green-500/30",
+  credited: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30",
   failed: "bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/30",
 };
 
@@ -43,6 +44,7 @@ const STATUS_LABELS: Record<string, string> = {
   requested: "Requested",
   under_review: "Under Review",
   processed: "Processed",
+  credited: "Amount Credited",
   failed: "Failed",
 };
 
@@ -116,7 +118,7 @@ export default async function AdminRefundsPage() {
                     </span>
                   </td>
                   <td className="px-4 py-3">
-                    {r.refund_status !== "processed" && r.refund_status !== "failed" && (
+                    {r.refund_status !== "credited" && r.refund_status !== "failed" && (
                       <ApproveRefundButton
                         enrollmentId={r.id}
                         initialStatus={r.refund_status}

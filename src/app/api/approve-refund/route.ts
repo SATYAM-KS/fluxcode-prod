@@ -30,7 +30,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Missing enrollmentId" }, { status: 400 });
     }
 
-    const ALLOWED = ["under_review", "processed"];
+    const ALLOWED = ["under_review", "processed", "credited"];
     if (!status || !ALLOWED.includes(status)) {
       return NextResponse.json({ error: "Invalid status" }, { status: 400 });
     }

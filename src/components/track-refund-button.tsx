@@ -27,9 +27,10 @@ function buildTimeline(
   refundStatus: RefundStatus,
   refundedAt: string | null
 ): TimelineStep[] {
-  const isProcessed = refundStatus === "processed";
+  const isCredited = refundStatus === "credited";
+  const isProcessed = refundStatus === "processed" || isCredited;
   const isFailed = refundStatus === "failed";
-  const isUnderReview = refundStatus === "under_review";
+  const isUnderReview = refundStatus === "under_review" || isProcessed;
 
   const fmt = (d: string | null) =>
     d
@@ -73,8 +74,8 @@ function buildTimeline(
     },
     {
       label: "Amount Credited",
-      description: "Refund credited to your original payment method (3–5 business days).",
-      state: isProcessed ? "active" : "pending",
+      description: "Refund credited to your original payment method.",
+      state: isCredited ? "done" : isProcessed ? "active" : "pending",
       date: null,
     },
   ];
