@@ -16,8 +16,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin-client";
 import { Button } from "@/components/ui/button";
 import { RazorpayEnrollButton } from "@/components/razorpay-enroll-button";
-import { RefundRequestButton } from "@/components/refund-request-button";
-import { TrackRefundButton } from "@/components/track-refund-button";
+import { RefundSection } from "@/components/refund-section";
 import { isAdmin } from "@/lib/supabase/get-user-role";
 
 export const dynamic = "force-dynamic";
@@ -439,14 +438,9 @@ export default async function CourseDetailPage({
                       <CheckCircle className="h-4 w-4" />
                       You&apos;re enrolled
                     </div>
-                    <RefundRequestButton
+                    <RefundSection
                       courseId={course.id}
                       purchasedAt={enrollmentMeta?.purchased_at ?? null}
-                      refundRequestedAt={enrollmentMeta?.refund_requested_at ?? null}
-                      refundStatus={enrollmentMeta?.refund_status ?? null}
-                      refundedAt={enrollmentMeta?.refunded_at ?? null}
-                    />
-                    <TrackRefundButton
                       refundRequestedAt={enrollmentMeta?.refund_requested_at ?? null}
                       refundStatus={enrollmentMeta?.refund_status ?? null}
                       refundedAt={enrollmentMeta?.refunded_at ?? null}

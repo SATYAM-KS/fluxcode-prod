@@ -24,12 +24,14 @@ export function RefundRequestButton({
   refundRequestedAt,
   refundStatus,
   refundedAt,
+  onRefundRequested,
 }: {
   courseId: string;
   purchasedAt: string | null;
   refundRequestedAt: string | null;
   refundStatus: string | null;
   refundedAt: string | null;
+  onRefundRequested?: () => void;
 }) {
   const [pending, startTransition] = useTransition();
   const [requested, setRequested] = useState(!!refundRequestedAt);
@@ -145,6 +147,7 @@ export function RefundRequestButton({
                   }
                   setRequested(true);
                   setOpen(false);
+                  onRefundRequested?.();
                   setTimeout(() => {
                     toast.success("Refund request submitted! 🎉", {
                       description:
