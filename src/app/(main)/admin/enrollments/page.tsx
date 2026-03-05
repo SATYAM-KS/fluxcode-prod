@@ -1,17 +1,15 @@
 import { TrendingUp, BookOpen } from "lucide-react";
 
-import { createAdminClient } from "@/lib/supabase/admin-client";
 import { createClient } from "@/lib/supabase/server";
 
 export const metadata = { title: "Enrollments – Admin | FluxCode" };
 
 async function getEnrollments() {
-  const admin = createAdminClient();
   const supabase = createClient();
 
   const [{ data: allEnrollments }, { data: profiles }] = await Promise.all([
-    admin.from("enrollments").select("user_id, course_id, created_at").order("created_at", { ascending: false }),
-    admin.from("profiles").select("id, email, avatar_url, role"),
+    supabase.from("enrollments").select("user_id, course_id, created_at").order("created_at", { ascending: false }),
+    supabase.from("profiles").select("id, email, avatar_url, role"),
   ]);
 
   // Get unique course ids and fetch titles

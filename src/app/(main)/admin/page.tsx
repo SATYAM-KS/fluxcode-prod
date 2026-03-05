@@ -2,14 +2,13 @@ import Link from "next/link";
 import { BookOpen, Users, TrendingUp, ChevronRight } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
-import { createAdminClient } from "@/lib/supabase/admin-client";
 import { createClient } from "@/lib/supabase/server";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 /* ─── Data fetching ─────────────────────────────────────────────── */
 
 async function getAdminStats() {
-  const admin = createAdminClient();
+  const supabase = createClient();
 
   const [
     { count: totalCourses },
@@ -18,22 +17,21 @@ async function getAdminStats() {
     { data: recentSignups },
     { data: allEnrollments },
   ] = await Promise.all([
-    admin.from("courses").select("*", { count: "exact", head: true }),
-    admin.from("profiles").select("*", { count: "exact", head: true }),
-    admin.from("enrollments").select("*", { count: "exact", head: true }),
-    admin
+    supabase.from("courses").select("*", { count: "exact", head: true }),
+    supabase.from("profiles").select("*", { count: "exact", head: true }),
+    supabase.from("enrollments").select("*", { count: "exact", head: true }),
+    supabase
       .from("profiles")
       .select("id, email, avatar_url, role, created_at")
       .order("created_at", { ascending: false })
       .limit(8),
-    admin
+    supabase
       .from("enrollments")
       .select("user_id, course_id"),
   ]);
 
   // Fetch course titles for all enrolled course_ids
   const courseIds = [...new Set((allEnrollments ?? []).map((e: any) => e.course_id))];
-  const supabase = createClient();
   const { data: courses } = courseIds.length
     ? await supabase.from("courses").select("id, title").in("id", courseIds)
     : { data: [] };

@@ -1,17 +1,16 @@
 import { Shield } from "lucide-react";
 
-import { createAdminClient } from "@/lib/supabase/admin-client";
 import { createClient } from "@/lib/supabase/server";
 import { RoleManager } from "./role-manager";
 
 export const metadata = { title: "Settings – Admin | FluxCode" };
 
 async function getUsersWithEnrollmentCounts() {
-  const admin = createAdminClient();
+  const supabase = createClient();
 
   const [{ data: profiles }, { data: enrollments }] = await Promise.all([
-    admin.from("profiles").select("id, email, role, avatar_url").order("created_at", { ascending: false }),
-    admin.from("enrollments").select("user_id"),
+    supabase.from("profiles").select("id, email, role, avatar_url").order("created_at", { ascending: false }),
+    supabase.from("enrollments").select("user_id"),
   ]);
 
   const countMap: Record<string, number> = {};
