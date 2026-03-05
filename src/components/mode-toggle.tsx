@@ -1,33 +1,38 @@
 "use client";
 
 import * as React from "react";
-import { Moon, Sun } from "lucide-react";
+import { Moon, Sun, Monitor } from "lucide-react";
 import { useTheme } from "next-themes";
 
 import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+
+const CYCLE: Array<"light" | "dark" | "system"> = ["light", "dark", "system"];
 
 export function ModeToggle() {
-  const { setTheme } = useTheme();
+  const { theme, setTheme, resolvedTheme } = useTheme();
+  const [mounted, setMounted] = React.useState(false);
+  React.useEffect(() => setMounted(true), []);
+
+  function cycleTheme() {
+    const current = theme ?? resolvedTheme ?? "dark";
+    const idx = CYCLE.indexOf(current as any);
+    const next = CYCLE[(idx + 1) % CYCLE.length];
+    setTheme(next);
+  }
+
+  const current = mounted ? (theme ?? "dark") : "dark";
+  const Icon = current === "dark" ? Moon : current === "light" ? Sun : Monitor;
 
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button variant="outline" size="icon" aria-label="Toggle theme" className="relative">
-          <Sun className="h-4 w-4 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
-          <Moon className="absolute h-4 w-4 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end">
-        <DropdownMenuItem onClick={() => setTheme("light")}>Light</DropdownMenuItem>
-        <DropdownMenuItem onClick={() => setTheme("dark")}>Dark</DropdownMenuItem>
-        <DropdownMenuItem onClick={() => setTheme("system")}>System</DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
+    <Button
+      variant="outline"
+      size="icon"
+      aria-label="Toggle theme"
+      className="relative"
+      onClick={cycleTheme}
+      title={`Theme: ${current} (click to cycle)`}
+    >
+      <Icon className="h-4 w-4" />
+    </Button>
   );
 }
