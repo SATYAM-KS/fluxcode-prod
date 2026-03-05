@@ -1,6 +1,7 @@
 import { Users, BookOpen } from "lucide-react";
 
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin-client";
 
 export const metadata = { title: "Users – Admin | FluxCode" };
 
@@ -17,10 +18,11 @@ async function getUsers() {
       .select("user_id, course_id"),
   ]);
 
-  // Fetch course titles for all enrolled course_ids
+  // Fetch course titles via admin client (bypasses RLS)
   const courseIds = [...new Set((allEnrollments ?? []).map((e: any) => e.course_id))];
+  const adminClient = createAdminClient();
   const coursesResult = courseIds.length
-    ? await supabase.from("courses").select("id, title").in("id", courseIds)
+    ? await adminClient.from("courses").select("id, title").in("id", courseIds)
     : { data: [], error: null };
   const { data: courses } = coursesResult;
   const courseMap: Record<string, string> = {};

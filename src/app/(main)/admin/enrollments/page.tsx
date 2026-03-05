@@ -1,6 +1,7 @@
 import { TrendingUp, BookOpen } from "lucide-react";
 
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin-client";
 
 export const metadata = { title: "Enrollments – Admin | FluxCode" };
 
@@ -12,10 +13,11 @@ async function getEnrollments() {
     supabase.from("profiles").select("id, email, avatar_url, role"),
   ]);
 
-  // Get unique course ids and fetch titles
+  // Get unique course ids and fetch titles via admin client (bypasses RLS)
   const courseIds = [...new Set((allEnrollments ?? []).map((e: any) => e.course_id))];
+  const adminClient = createAdminClient();
   const { data: courses } = courseIds.length
-    ? await supabase.from("courses").select("id, title").in("id", courseIds)
+    ? await adminClient.from("courses").select("id, title").in("id", courseIds)
     : { data: [] };
 
   const courseMap: Record<string, string> = {};

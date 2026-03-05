@@ -3,6 +3,7 @@ import { BookOpen, Users, TrendingUp, ChevronRight } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin-client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 /* ─── Data fetching ─────────────────────────────────────────────── */
@@ -30,10 +31,11 @@ async function getAdminStats() {
       .select("user_id, course_id"),
   ]);
 
-  // Fetch course titles for all enrolled course_ids
+  // Fetch course titles via admin client (bypasses RLS — courses table may restrict non-enrolled reads)
   const courseIds = [...new Set((allEnrollments ?? []).map((e: any) => e.course_id))];
+  const adminClient = createAdminClient();
   const { data: courses } = courseIds.length
-    ? await supabase.from("courses").select("id, title").in("id", courseIds)
+    ? await adminClient.from("courses").select("id, title").in("id", courseIds)
     : { data: [] };
   const courseMap: Record<string, string> = {};
   for (const c of courses ?? []) courseMap[c.id] = c.title;
