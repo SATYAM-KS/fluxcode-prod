@@ -1,9 +1,11 @@
 import Link from "next/link";
+import { Toaster } from "sonner";
 import { NavHeader } from "@/components/nav-header";
 
 export default function MainLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-dvh">
+      <Toaster richColors position="top-right" />
       <NavHeader />
       {children}
       <footer className="border-t border-border bg-muted/30 py-10">
