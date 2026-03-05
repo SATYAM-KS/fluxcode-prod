@@ -756,89 +756,6 @@ function YouTubePlayer({
   );
 }
 
-/* ─── Mobile Layout ─────────────────────────────────────────────── */
-
-function MobileLayout({
-  activeLesson,
-  userId,
-  onComplete,
-  onMenuOpen,
-}: {
-  activeLesson: Lesson | null;
-  userId: string;
-  onComplete: () => void;
-  onMenuOpen: () => void;
-}) {
-  const [tab, setTab] = useState<"video" | "class">("video");
-
-  return (
-    <div className="flex lg:hidden flex-1 flex-col overflow-hidden rounded-xl border border-zinc-800 bg-zinc-900">
-      {/* Top bar with tabs + menu */}
-      <div className="flex h-11 shrink-0 items-center justify-between border-b border-zinc-800 px-3">
-        <div className="flex gap-1">
-          <button
-            onClick={() => setTab("video")}
-            className={cn("rounded-md px-3 py-1 text-xs font-semibold transition-colors", tab === "video" ? "bg-zinc-700 text-white" : "text-zinc-400 hover:text-white")}
-          >
-            Video
-          </button>
-          <button
-            onClick={() => setTab("class")}
-            className={cn("rounded-md px-3 py-1 text-xs font-semibold transition-colors", tab === "class" ? "bg-zinc-700 text-white" : "text-zinc-400 hover:text-white")}
-          >
-            Class
-          </button>
-        </div>
-        <button onClick={onMenuOpen} className="rounded p-1.5 hover:bg-zinc-800">
-          <Menu className="h-4 w-4 text-zinc-400" />
-        </button>
-      </div>
-
-      {/* Video tab */}
-      {tab === "video" && (
-        <div className="flex-1 overflow-hidden bg-black">
-          <YouTubePlayer lesson={activeLesson} userId={userId} onComplete={onComplete} />
-        </div>
-      )}
-
-      {/* Class tab */}
-      {tab === "class" && (
-        <div className="flex-1 overflow-y-auto p-4">
-          {activeLesson ? (
-            <>
-              <h2 className="text-base font-bold leading-snug text-white">{activeLesson.title}</h2>
-              {activeLesson.duration && (
-                <p className="mt-1 text-xs text-zinc-400">{fmtDuration(activeLesson.duration)}</p>
-              )}
-              {activeLesson.completed ? (
-                <div className="mt-4 flex items-center gap-2 text-sm font-medium text-green-400">
-                  <CheckCircle2 className="h-4 w-4" />
-                  Completed
-                </div>
-              ) : (
-                <button
-                  onClick={onComplete}
-                  className="mt-4 w-full rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary/90 transition-colors"
-                >
-                  Complete Video
-                </button>
-              )}
-              {activeLesson.description && (
-                <div className="mt-5 border-t border-zinc-800 pt-4">
-                  <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-zinc-500">Description</p>
-                  <p className="text-sm text-zinc-300 leading-relaxed whitespace-pre-wrap">{activeLesson.description}</p>
-                </div>
-              )}
-            </>
-          ) : (
-            <p className="text-sm text-zinc-500">Select a lesson to begin.</p>
-          )}
-        </div>
-      )}
-    </div>
-  );
-}
-
 /* ─── Lesson Sidebar ────────────────────────────────────────────── */
 
 function LessonSidebar({
@@ -1001,79 +918,88 @@ export function LearningInterface({ course, sections, activeLessonId, userId }: 
     window.addEventListener("mouseup", onUp);
   }, []);
 
+  // Mobile tab state: "class" | "lessons"
+  const [mobileTab, setMobileTab] = useState<"class" | "lessons">("class");
+
   return (
     <div className="fixed inset-0 flex flex-col bg-zinc-950 text-zinc-100">
 
-      {/* ── Main padded area ── */}
-      <div className="flex flex-1 gap-2 overflow-hidden p-2 pb-0">
+      {/* ════════════════════════════════════════════════════════
+          MOBILE LAYOUT  (hidden on lg+)
+      ════════════════════════════════════════════════════════ */}
+      <div className="flex flex-1 flex-col overflow-hidden lg:hidden">
 
-        {/* Col 1: Sidebar panel */}
-        <div className={cn("w-60 shrink-0 flex-col rounded-xl border border-zinc-800 bg-zinc-900 overflow-hidden", sidebarOpen ? "flex" : "hidden lg:flex")}>
-          {/* Go Back header */}
-          <div className="flex h-11 shrink-0 items-center justify-between border-b border-zinc-800 px-4">
-            <button
-              onClick={() => router.push(`/courses/${course.id}`)}
-              className="flex items-center gap-1.5 text-sm font-medium text-zinc-300 hover:text-white"
-            >
-              <ChevronLeft className="h-4 w-4" />
-              Go Back
-            </button>
-            <button onClick={() => setSidebarOpen((v) => !v)} className="rounded p-1 hover:bg-zinc-800 lg:hidden">
-              <Menu className="h-4 w-4" />
-            </button>
+        {/* Mobile top bar */}
+        <div className="flex h-11 shrink-0 items-center justify-between border-b border-zinc-800 bg-zinc-900 px-3">
+          <button
+            onClick={() => router.push(`/courses/${course.id}`)}
+            className="flex items-center gap-1 text-sm font-medium text-zinc-300 hover:text-white"
+          >
+            <ChevronLeft className="h-4 w-4" />
+            Back
+          </button>
+          <p className="max-w-[180px] truncate text-xs font-semibold text-zinc-200">{activeLesson?.title ?? course.title}</p>
+          <div className="w-10" />
+        </div>
+
+        {/* Video — fixed 16:9 aspect on mobile */}
+        <div className="w-full shrink-0 bg-black" style={{ aspectRatio: "16/9" }}>
+          <YouTubePlayer lesson={activeLesson} userId={userId} onComplete={handleMarkComplete} />
+        </div>
+
+        {/* Progress bar under video */}
+        <div className="shrink-0 bg-zinc-900 px-4 py-2">
+          <div className="flex items-center justify-between text-[11px] text-zinc-400 mb-1">
+            <span>{progressPct.toFixed(0)}% Complete</span>
+            <span>{completedLessons}/{totalLessons} videos</span>
           </div>
-
-          {/* Progress */}
-          <div className="shrink-0 border-b border-zinc-800 px-4 py-3">
-            <p className="mb-1 text-[11px] font-semibold text-zinc-400">{progressPct.toFixed(1)}% Complete</p>
-            <div className="h-1.5 w-full overflow-hidden rounded-full bg-zinc-700">
-              <div className="h-full rounded-full bg-primary transition-all" style={{ width: `${progressPct}%` }} />
-            </div>
-            <div className="mt-2 flex gap-4 text-[11px] text-zinc-500">
-              <span>Video <span className="font-semibold text-zinc-300">{completedLessons}/{totalLessons}</span></span>
-            </div>
-          </div>
-
-          {/* Lesson list */}
-          <div className="flex-1 overflow-y-auto">
-            <LessonSidebar sections={localSections} activeLessonId={activeLessonId} onLessonClick={(id) => { gotoLesson(id); setSidebarOpen(false); }} />
+          <div className="h-1.5 w-full overflow-hidden rounded-full bg-zinc-700">
+            <div className="h-full rounded-full bg-primary transition-all" style={{ width: `${progressPct}%` }} />
           </div>
         </div>
 
-        {/* Mobile sidebar overlay */}
-        {sidebarOpen && (
-          <div className="fixed inset-0 z-40 bg-black/60 lg:hidden" onClick={() => setSidebarOpen(false)} />
-        )}
+        {/* Tab switcher */}
+        <div className="flex shrink-0 border-b border-zinc-800 bg-zinc-900">
+          <button
+            onClick={() => setMobileTab("class")}
+            className={cn("flex-1 py-2.5 text-sm font-semibold transition-colors", mobileTab === "class" ? "border-b-2 border-primary text-white" : "text-zinc-500 hover:text-zinc-300")}
+          >
+            Class Info
+          </button>
+          <button
+            onClick={() => setMobileTab("lessons")}
+            className={cn("flex-1 py-2.5 text-sm font-semibold transition-colors", mobileTab === "lessons" ? "border-b-2 border-primary text-white" : "text-zinc-500 hover:text-zinc-300")}
+          >
+            Lessons
+          </button>
+        </div>
 
-        {/* ── Desktop: side-by-side resizable columns ── */}
-        <div ref={rightColRef} className="hidden lg:flex flex-1 gap-0 overflow-hidden rounded-xl">
-
-          {/* Col 2: Class panel */}
-          <div className="flex flex-col overflow-hidden rounded-l-xl border border-zinc-800 bg-zinc-900" style={{ width: `${classPct}%` }}>
-            <div className="flex h-11 shrink-0 items-center gap-2 border-b border-zinc-800 px-4">
-              <PlayCircle className="h-4 w-4 text-primary shrink-0" />
-              <span className="text-sm font-semibold truncate">Class</span>
-            </div>
-            <div className="flex-1 overflow-y-auto p-5">
+        {/* Tab content */}
+        <div className="flex-1 overflow-y-auto bg-zinc-900">
+          {mobileTab === "class" ? (
+            <div className="p-4">
               {activeLesson ? (
                 <>
-                  <h2 className="text-lg font-bold leading-snug text-white">{activeLesson.title}</h2>
+                  <h2 className="text-base font-bold leading-snug text-white">{activeLesson.title}</h2>
                   {activeLesson.duration && (
                     <p className="mt-1 text-xs text-zinc-400">{fmtDuration(activeLesson.duration)}</p>
                   )}
                   {activeLesson.completed ? (
-                    <div className="mt-4 flex items-center gap-2 text-sm font-medium text-green-400">
+                    <div className="mt-3 flex items-center gap-2 text-sm font-medium text-green-400">
                       <CheckCircle2 className="h-4 w-4" />
                       Completed
                     </div>
                   ) : (
-                    <button onClick={handleMarkComplete} className="mt-4 rounded-md bg-primary px-4 py-1.5 text-sm font-semibold text-primary-foreground hover:bg-primary/90 transition-colors">
+                    <button
+                      onClick={handleMarkComplete}
+                      className="mt-3 w-full rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary/90 transition-colors"
+                    >
                       Complete Video
                     </button>
                   )}
                   {activeLesson.description && (
-                    <div className="mt-5 border-t border-zinc-800 pt-4">
-                      <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-zinc-500">Description</p>
+                    <div className="mt-4 border-t border-zinc-800 pt-4">
+                      <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-zinc-500">Description</p>
                       <p className="text-sm text-zinc-300 leading-relaxed whitespace-pre-wrap">{activeLesson.description}</p>
                     </div>
                   )}
@@ -1082,51 +1008,155 @@ export function LearningInterface({ course, sections, activeLessonId, userId }: 
                 <p className="text-sm text-zinc-500">Select a lesson to begin.</p>
               )}
             </div>
+          ) : (
+            <LessonSidebar
+              sections={localSections}
+              activeLessonId={activeLessonId}
+              onLessonClick={(id) => { gotoLesson(id); setMobileTab("class"); }}
+            />
+          )}
+        </div>
+
+        {/* Mobile bottom nav */}
+        <div className="flex h-14 shrink-0 items-center justify-center gap-3 border-t border-zinc-800 bg-zinc-900 px-4">
+          <button
+            onClick={() => activeLessonIndex > 0 && gotoLesson(allLessons[activeLessonIndex - 1].id)}
+            disabled={activeLessonIndex <= 0}
+            className="flex h-9 w-9 items-center justify-center rounded-lg border border-zinc-700 text-zinc-400 hover:border-zinc-500 hover:text-white disabled:opacity-30 transition-colors"
+          >
+            <ChevronLeft className="h-5 w-5" />
+          </button>
+          <span className="min-w-[110px] rounded-lg border border-zinc-700 px-3 py-1.5 text-center text-sm font-medium text-zinc-300">
+            Lesson {activeLessonIndex + 1}/{totalLessons}
+          </span>
+          <button
+            onClick={() => activeLessonIndex < totalLessons - 1 && gotoLesson(allLessons[activeLessonIndex + 1].id)}
+            disabled={activeLessonIndex >= totalLessons - 1}
+            className="flex h-9 w-9 items-center justify-center rounded-lg border border-zinc-700 text-zinc-400 hover:border-zinc-500 hover:text-white disabled:opacity-30 transition-colors"
+          >
+            <ChevronRight className="h-5 w-5" />
+          </button>
+        </div>
+      </div>
+
+      {/* ════════════════════════════════════════════════════════
+          DESKTOP LAYOUT  (hidden below lg)
+      ════════════════════════════════════════════════════════ */}
+      <div className="hidden lg:flex lg:flex-1 lg:flex-col lg:overflow-hidden">
+        {/* Main padded area */}
+        <div className="flex flex-1 gap-2 overflow-hidden p-2 pb-0">
+
+          {/* Col 1: Sidebar panel */}
+          <div className="flex w-60 shrink-0 flex-col rounded-xl border border-zinc-800 bg-zinc-900 overflow-hidden">
+            {/* Go Back header */}
+            <div className="flex h-11 shrink-0 items-center border-b border-zinc-800 px-4">
+              <button
+                onClick={() => router.push(`/courses/${course.id}`)}
+                className="flex items-center gap-1.5 text-sm font-medium text-zinc-300 hover:text-white"
+              >
+                <ChevronLeft className="h-4 w-4" />
+                Go Back
+              </button>
+            </div>
+
+            {/* Progress */}
+            <div className="shrink-0 border-b border-zinc-800 px-4 py-3">
+              <p className="mb-1 text-[11px] font-semibold text-zinc-400">{progressPct.toFixed(1)}% Complete</p>
+              <div className="h-1.5 w-full overflow-hidden rounded-full bg-zinc-700">
+                <div className="h-full rounded-full bg-primary transition-all" style={{ width: `${progressPct}%` }} />
+              </div>
+              <div className="mt-2 flex gap-4 text-[11px] text-zinc-500">
+                <span>Video <span className="font-semibold text-zinc-300">{completedLessons}/{totalLessons}</span></span>
+              </div>
+            </div>
+
+            {/* Lesson list */}
+            <div className="flex-1 overflow-y-auto">
+              <LessonSidebar sections={localSections} activeLessonId={activeLessonId} onLessonClick={(id) => gotoLesson(id)} />
+            </div>
           </div>
 
-          {/* Draggable divider */}
-          <div onMouseDown={onDividerMouseDown} className="w-1.5 shrink-0 cursor-col-resize bg-zinc-800 hover:bg-primary/50 active:bg-primary transition-colors" />
+          {/* Col 2 + divider + Col 3 — resizable area */}
+          <div ref={rightColRef} className="flex flex-1 gap-0 overflow-hidden rounded-xl">
 
-          {/* Col 3: Video panel */}
-          <div className="flex flex-1 flex-col overflow-hidden rounded-r-xl border border-zinc-800 bg-zinc-900">
-            <div className="flex h-11 shrink-0 items-center gap-2 border-b border-zinc-800 px-4">
-              <PlayCircle className="h-4 w-4 text-primary shrink-0" />
-              <span className="text-sm font-semibold">Video Lecture</span>
+            {/* Col 2: Class panel */}
+            <div className="flex flex-col overflow-hidden rounded-l-xl border border-zinc-800 bg-zinc-900" style={{ width: `${classPct}%` }}>
+              <div className="flex h-11 shrink-0 items-center gap-2 border-b border-zinc-800 px-4">
+                <PlayCircle className="h-4 w-4 text-primary shrink-0" />
+                <span className="text-sm font-semibold truncate">Class</span>
+              </div>
+              <div className="flex-1 overflow-y-auto p-5">
+                {activeLesson ? (
+                  <>
+                    <h2 className="text-lg font-bold leading-snug text-white">{activeLesson.title}</h2>
+                    {activeLesson.duration && (
+                      <p className="mt-1 text-xs text-zinc-400">{fmtDuration(activeLesson.duration)}</p>
+                    )}
+                    {activeLesson.completed ? (
+                      <div className="mt-4 flex items-center gap-2 text-sm font-medium text-green-400">
+                        <CheckCircle2 className="h-4 w-4" />
+                        Completed
+                      </div>
+                    ) : (
+                      <button
+                        onClick={handleMarkComplete}
+                        className="mt-4 rounded-md bg-primary px-4 py-1.5 text-sm font-semibold text-primary-foreground hover:bg-primary/90 transition-colors"
+                      >
+                        Complete Video
+                      </button>
+                    )}
+                    {activeLesson.description && (
+                      <div className="mt-5 border-t border-zinc-800 pt-4">
+                        <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-zinc-500">Description</p>
+                        <p className="text-sm text-zinc-300 leading-relaxed whitespace-pre-wrap">{activeLesson.description}</p>
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <p className="text-sm text-zinc-500">Select a lesson to begin.</p>
+                )}
+              </div>
             </div>
-            <div className="flex-1 overflow-hidden bg-black">
-              <YouTubePlayer lesson={activeLesson} userId={userId} onComplete={handleMarkComplete} />
+
+            {/* Draggable divider */}
+            <div
+              onMouseDown={onDividerMouseDown}
+              className="w-1.5 shrink-0 cursor-col-resize bg-zinc-800 hover:bg-primary/50 active:bg-primary transition-colors"
+            />
+
+            {/* Col 3: Video panel */}
+            <div className="flex flex-1 flex-col overflow-hidden rounded-r-xl border border-zinc-800 bg-zinc-900">
+              <div className="flex h-11 shrink-0 items-center gap-2 border-b border-zinc-800 px-4">
+                <PlayCircle className="h-4 w-4 text-primary shrink-0" />
+                <span className="text-sm font-semibold">Video Lecture</span>
+              </div>
+              <div className="flex-1 overflow-hidden bg-black">
+                <YouTubePlayer lesson={activeLesson} userId={userId} onComplete={handleMarkComplete} />
+              </div>
             </div>
           </div>
         </div>
 
-        {/* ── Mobile: stacked video + class with tab switcher ── */}
-        <MobileLayout
-          activeLesson={activeLesson}
-          userId={userId}
-          onComplete={handleMarkComplete}
-          onMenuOpen={() => setSidebarOpen(true)}
-        />
-      </div>
-
-      {/* ── Bottom nav bar ── */}
-      <div className="flex h-12 shrink-0 items-center justify-center gap-3 px-4">
-        <button
-          onClick={() => activeLessonIndex > 0 && gotoLesson(allLessons[activeLessonIndex - 1].id)}
-          disabled={activeLessonIndex <= 0}
-          className="flex h-8 w-8 items-center justify-center rounded-lg border border-zinc-700 text-zinc-400 hover:border-zinc-500 hover:text-white disabled:opacity-30 transition-colors"
-        >
-          <ChevronLeft className="h-4 w-4" />
-        </button>
-        <span className="min-w-[90px] rounded-lg border border-zinc-700 px-3 py-1 text-center text-sm font-medium text-zinc-300">
-          Lesson {activeLessonIndex + 1}/{totalLessons}
-        </span>
-        <button
-          onClick={() => activeLessonIndex < totalLessons - 1 && gotoLesson(allLessons[activeLessonIndex + 1].id)}
-          disabled={activeLessonIndex >= totalLessons - 1}
-          className="flex h-8 w-8 items-center justify-center rounded-lg border border-zinc-700 text-zinc-400 hover:border-zinc-500 hover:text-white disabled:opacity-30 transition-colors"
-        >
-          <ChevronRight className="h-4 w-4" />
-        </button>
+        {/* Desktop bottom nav bar */}
+        <div className="flex h-12 shrink-0 items-center justify-center gap-3 px-4">
+          <button
+            onClick={() => activeLessonIndex > 0 && gotoLesson(allLessons[activeLessonIndex - 1].id)}
+            disabled={activeLessonIndex <= 0}
+            className="flex h-8 w-8 items-center justify-center rounded-lg border border-zinc-700 text-zinc-400 hover:border-zinc-500 hover:text-white disabled:opacity-30 transition-colors"
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </button>
+          <span className="min-w-[90px] rounded-lg border border-zinc-700 px-3 py-1 text-center text-sm font-medium text-zinc-300">
+            Lesson {activeLessonIndex + 1}/{totalLessons}
+          </span>
+          <button
+            onClick={() => activeLessonIndex < totalLessons - 1 && gotoLesson(allLessons[activeLessonIndex + 1].id)}
+            disabled={activeLessonIndex >= totalLessons - 1}
+            className="flex h-8 w-8 items-center justify-center rounded-lg border border-zinc-700 text-zinc-400 hover:border-zinc-500 hover:text-white disabled:opacity-30 transition-colors"
+          >
+            <ChevronRight className="h-4 w-4" />
+          </button>
+        </div>
       </div>
     </div>
   );
