@@ -1,7 +1,8 @@
-import { BookOpen, Search } from "lucide-react";
+import { BookOpen } from "lucide-react";
 
 import { CourseCard } from "@/components/course-card";
 import { createAdminClient } from "@/lib/supabase/admin-client";
+import { createClient } from "@/lib/supabase/server";
 import type { Course } from "@/types";
 
 export const metadata = {
@@ -11,18 +12,25 @@ export const metadata = {
 
 export const dynamic = "force-dynamic";
 
-async function getAllCourses(): Promise<Course[]> {
-  const admin = createAdminClient();
-  const { data } = await admin
-    .from("courses")
-    .select("*")
-    .eq("is_published", true)
-    .order("created_at", { ascending: false });
-  return data ?? [];
-}
-
 export default async function CoursesPage() {
-  const courses = await getAllCourses();
+  const admin = createAdminClient();
+  const supabase = createClient();
+
+  const [{ data: coursesRaw }, { data: { user } }] = await Promise.all([
+    admin.from("courses").select("*").eq("is_published", true).order("created_at", { ascending: false }),
+    supabase.auth.getUser(),
+  ]);
+
+  const courses: Course[] = coursesRaw ?? [];
+
+  let enrolledIds = new Set<string>();
+  if (user) {
+    const { data: enrollments } = await supabase
+      .from("enrollments")
+      .select("course_id")
+      .eq("user_id", user.id);
+    enrolledIds = new Set((enrollments ?? []).map((e: any) => e.course_id));
+  }
 
   return (
     <main>
@@ -44,7 +52,7 @@ export default async function CoursesPage() {
         {courses.length > 0 ? (
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {courses.map((course) => (
-              <CourseCard key={course.id} course={course} />
+              <CourseCard key={course.id} course={course} isEnrolled={enrolledIds.has(course.id)} />
             ))}
           </div>
         ) : (
