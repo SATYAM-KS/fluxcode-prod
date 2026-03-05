@@ -14,8 +14,16 @@ async function getUsers() {
       .order("created_at", { ascending: false }),
     admin
       .from("enrollments")
-      .select("user_id, course_id, courses ( title )"),
+      .select("user_id, course_id"),
   ]);
+
+  // Fetch course titles for all enrolled course_ids
+  const courseIds = [...new Set((allEnrollments ?? []).map((e: any) => e.course_id))];
+  const { data: courses } = courseIds.length
+    ? await admin.from("courses").select("id, title").in("id", courseIds)
+    : { data: [] };
+  const courseMap: Record<string, string> = {};
+  for (const c of courses ?? []) courseMap[c.id] = c.title;
 
   // Merge enrollments into each profile
   const enrollmentsByUser: Record<string, { course_id: string; title: string }[]> = {};
@@ -23,7 +31,7 @@ async function getUsers() {
     if (!enrollmentsByUser[e.user_id]) enrollmentsByUser[e.user_id] = [];
     enrollmentsByUser[e.user_id].push({
       course_id: e.course_id,
-      title: (e.courses as any)?.title ?? "Unknown",
+      title: courseMap[e.course_id] ?? "Unknown",
     });
   }
 
