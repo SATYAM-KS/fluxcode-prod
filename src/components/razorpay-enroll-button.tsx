@@ -71,25 +71,27 @@ export function RazorpayEnrollButton({
   async function onProceed(finalAmount: number, couponCode?: string) {
     setModalOpen(false);
     setPaying(true);
-    console.log("[checkout] onProceed called, finalAmount:", finalAmount, "coupon:", couponCode);
 
     try {
-      const resp = await fetch("/api/create-order", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ courseId, finalAmount, couponCode }),
-      });
+      // Run script load and order creation in parallel to minimise delay
+      const [scriptOk, orderResp] = await Promise.all([
+        loadRazorpayScript(),
+        fetch("/api/create-order", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ courseId, finalAmount, couponCode }),
+        }),
+      ]);
 
-      const data = await resp.json();
+      const data = await orderResp.json();
 
-      if (!resp.ok) {
+      if (!orderResp.ok) {
         toast.error("Unable to create order", { description: data?.error });
         return;
       }
 
-      const ok = await loadRazorpayScript();
-      if (!ok) {
-        toast.error("Razorpay failed to load");
+      if (!scriptOk) {
+        toast.error("Razorpay failed to load. Check your internet connection.");
         return;
       }
 
