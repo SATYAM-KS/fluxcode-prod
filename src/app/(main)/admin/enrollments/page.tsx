@@ -7,11 +7,8 @@ export const metadata = { title: "Enrollments – Admin | FluxCode" };
 async function getEnrollments() {
   const supabase = createClient();
 
-  const enrollmentsResult = await supabase.from("enrollments").select("user_id, course_id, created_at").order("created_at", { ascending: false });
-  console.log("[admin/enrollments] data:", enrollmentsResult.data, "error:", enrollmentsResult.error, "status:", enrollmentsResult.status);
-
   const [{ data: allEnrollments }, { data: profiles }] = await Promise.all([
-    Promise.resolve(enrollmentsResult),
+    supabase.from("enrollments").select("user_id, course_id"),
     supabase.from("profiles").select("id, email, avatar_url, role"),
   ]);
 
@@ -30,7 +27,6 @@ async function getEnrollments() {
   return (allEnrollments ?? []).map((e: any) => ({
     user_id: e.user_id,
     course_id: e.course_id,
-    enrolled_at: e.created_at,
     email: profileMap[e.user_id]?.email ?? "Unknown",
     avatar_url: profileMap[e.user_id]?.avatar_url ?? null,
     course_title: courseMap[e.course_id] ?? "Unknown",
@@ -61,7 +57,6 @@ export default async function AdminEnrollmentsPage() {
               <tr className="border-b border-border bg-muted/40 text-left">
                 <th className="px-4 py-3 font-semibold text-muted-foreground">User</th>
                 <th className="px-4 py-3 font-semibold text-muted-foreground">Course</th>
-                <th className="hidden px-4 py-3 font-semibold text-muted-foreground md:table-cell">Enrolled On</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
@@ -89,13 +84,6 @@ export default async function AdminEnrollmentsPage() {
                       <BookOpen className="h-3 w-3" />
                       {e.course_title}
                     </span>
-                  </td>
-                  <td className="hidden px-4 py-3 text-muted-foreground md:table-cell">
-                    {new Date(e.enrolled_at).toLocaleDateString("en-US", {
-                      month: "short",
-                      day: "numeric",
-                      year: "numeric",
-                    })}
                   </td>
                 </tr>
               ))}
