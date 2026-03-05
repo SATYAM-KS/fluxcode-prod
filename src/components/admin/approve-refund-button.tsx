@@ -34,7 +34,11 @@ export function RefundActionsCell({
       try {
         await updateRefundStatus(enrollmentId, next);
         setStatus(next);
-        toast.success(`Refund marked as ${label}`);
+        toast.success(
+          next === "credited"
+            ? "Refund complete — enrollment removed"
+            : `Refund marked as ${label}`
+        );
         router.refresh();
       } catch (e: any) {
         toast.error("Action failed", { description: e.message });

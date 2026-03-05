@@ -35,6 +35,20 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Invalid status" }, { status: 400 });
     }
 
+    // When credited: delete the enrollment row entirely to revoke access
+    if (status === "credited") {
+      const { error } = await admin
+        .from("enrollments")
+        .delete()
+        .eq("id", enrollmentId);
+
+      if (error) {
+        return NextResponse.json({ error: error.message }, { status: 400 });
+      }
+
+      return NextResponse.json({ ok: true, deleted: true });
+    }
+
     const updatePayload: Record<string, any> = { refund_status: status };
     if (status === "processed") {
       updatePayload.refunded_at = new Date().toISOString();
