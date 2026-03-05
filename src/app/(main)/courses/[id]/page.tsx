@@ -334,8 +334,10 @@ export default async function CourseDetailPage({
               )}
 
               <div className="p-6">
-                {/* Price */}
-                <div className="mb-4 text-4xl font-extrabold">{formattedPrice}</div>
+                {/* Price — hidden for enrolled users */}
+                {!isEnrolled && (
+                  <div className="mb-4 text-4xl font-extrabold">{formattedPrice}</div>
+                )}
 
                 {/* CTA */}
                 {isEnrolled ? (
