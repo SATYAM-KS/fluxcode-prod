@@ -203,7 +203,9 @@ function YouTubePlayer({
       });
 
     const init = () => {
-      const startSeconds = resumePositionRef.current > 5 ? resumePositionRef.current : 0;
+      // If position is very large (sentinel for completed), start from beginning
+      const pos = resumePositionRef.current;
+      const startSeconds = pos > 5 && pos < 90000 ? pos : 0;
       // If player already exists and is ready, just cue the new video (no autoplay)
       if (playerRef.current && isReadyRef.current) {
         try {
@@ -242,9 +244,10 @@ function YouTubePlayer({
             setIsLoading(false);
             // Force highest available quality
             try { playerRef.current?.setPlaybackQuality("hd1080"); } catch { }
-            // Seek to saved position if > 5 seconds
-            if (resumePositionRef.current > 5) {
-              try { playerRef.current?.seekTo(resumePositionRef.current, true); } catch { }
+            // Seek to saved position if > 5s and not a completed-sentinel value
+            const rp = resumePositionRef.current;
+            if (rp > 5 && rp < 90000) {
+              try { playerRef.current?.seekTo(rp, true); } catch { }
             }
           },
           onStateChange: (e: any) => {
@@ -273,8 +276,11 @@ function YouTubePlayer({
               setIsPlaying(false);
               setProgress(100);
               prevStateRef.current = e.data;
-              // Reset saved position and auto-mark complete when finished
-              if (lesson) saveWatchPosition(0);
+              // Save full duration so this lesson stays as last-watched (resume picks it up)
+              try {
+                const dur = playerRef.current?.getDuration?.() ?? 0;
+                if (lesson) saveWatchPosition(dur > 0 ? dur : 99999);
+              } catch { if (lesson) saveWatchPosition(99999); }
               onComplete();
             } else if (e.data === S.BUFFERING) {
               setIsLoading(true);
