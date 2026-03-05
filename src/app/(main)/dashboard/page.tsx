@@ -21,11 +21,12 @@ export const metadata = {
 async function getEnrolledCoursesWithProgress(userId: string) {
   const supabase = createClient();
 
-  // Get all enrollments for this user
+  // Get all active enrollments (exclude refunded ones)
   const { data: enrollments } = await supabase
     .from("enrollments")
-    .select("course_id")
-    .eq("user_id", userId);
+    .select("course_id, refund_status")
+    .eq("user_id", userId)
+    .not("refund_status", "eq", "processed");
 
   if (!enrollments || enrollments.length === 0) return [];
 
