@@ -28,7 +28,8 @@ export default async function CoursesPage() {
     const { data: enrollments } = await supabase
       .from("enrollments")
       .select("course_id")
-      .eq("user_id", user.id);
+      .eq("user_id", user.id)
+      .not("refund_status", "eq", "processed");
     enrolledIds = new Set((enrollments ?? []).map((e: any) => e.course_id));
   }
 
