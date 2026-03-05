@@ -6,6 +6,7 @@ import {
   LayoutDashboard,
   BookOpen,
   Users,
+  TrendingUp,
   Settings,
   ArrowLeft,
 } from "lucide-react";
@@ -16,6 +17,7 @@ const NAV_LINKS = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard, exact: true },
   { href: "/admin/courses", label: "Courses", icon: BookOpen, exact: false },
   { href: "/admin/users", label: "Users", icon: Users, exact: false },
+  { href: "/admin/enrollments", label: "Enrollments", icon: TrendingUp, exact: false },
   { href: "/admin/settings", label: "Settings", icon: Settings, exact: false },
 ] as const;
 

@@ -123,7 +123,7 @@ export default async function AdminDashboardPage() {
       value: stats.totalEnrollments,
       icon: TrendingUp,
       iconClass: "text-green-500",
-      href: "/admin/users",
+      href: "/admin/enrollments",
     },
   ];
 
