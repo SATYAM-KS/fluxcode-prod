@@ -28,6 +28,18 @@ import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
+function useIsDesktop() {
+  const [isDesktop, setIsDesktop] = useState<boolean | null>(null);
+  useEffect(() => {
+    const mq = window.matchMedia("(min-width: 1024px)");
+    setIsDesktop(mq.matches);
+    const handler = (e: MediaQueryListEvent) => setIsDesktop(e.matches);
+    mq.addEventListener("change", handler);
+    return () => mq.removeEventListener("change", handler);
+  }, []);
+  return isDesktop;
+}
+
 /* ─── YouTube IFrame API loader ─────────────────────────────────── */
 
 declare global {
@@ -852,6 +864,7 @@ export function LearningInterface({ course, sections, activeLessonId, userId }: 
   const searchParams = useSearchParams();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [localSections, setLocalSections] = useState(sections);
+  const isDesktop = useIsDesktop();
 
   useEffect(() => { setLocalSections(sections); }, [sections]);
 
@@ -1001,9 +1014,11 @@ export function LearningInterface({ course, sections, activeLessonId, userId }: 
           <div className="w-10" />
         </div>
 
-        {/* Single video player — 16:9 */}
+        {/* Single video player — 16:9 — only mount when not desktop to avoid dual audio */}
         <div className="w-full shrink-0 bg-black" style={{ aspectRatio: "16/9" }}>
-          <YouTubePlayer lesson={activeLesson} userId={userId} onComplete={handleMarkComplete} playerId="yt-player-mobile" />
+          {isDesktop === false && (
+            <YouTubePlayer lesson={activeLesson} userId={userId} onComplete={handleMarkComplete} playerId="yt-player-mobile" />
+          )}
         </div>
 
         {/* Progress */}
@@ -1103,7 +1118,9 @@ export function LearningInterface({ course, sections, activeLessonId, userId }: 
                 <span className="text-sm font-semibold">Video Lecture</span>
               </div>
               <div className="flex-1 overflow-hidden bg-black">
-                <YouTubePlayer lesson={activeLesson} userId={userId} onComplete={handleMarkComplete} />
+                {isDesktop === true && (
+                  <YouTubePlayer lesson={activeLesson} userId={userId} onComplete={handleMarkComplete} />
+                )}
               </div>
             </div>
           </div>
