@@ -265,7 +265,7 @@ export default async function DashboardPage() {
                   </div>
 
                   {/* Timeline */}
-                  <div className="mt-4 flex items-center gap-0">
+                  <div className="mt-4 flex items-center">
                     {steps.map((step, i) => (
                       <div key={i} className="flex flex-1 items-center">
                         <div className="flex flex-col items-center gap-1">
@@ -288,20 +288,24 @@ export default async function DashboardPage() {
                               <Clock className="h-3.5 w-3.5 text-muted-foreground/30" />
                             )}
                           </div>
-                          <span className={`text-[10px] font-medium text-center leading-tight ${
+                          <span className={`hidden sm:block text-[10px] font-medium text-center leading-tight max-w-[56px] ${
                             step.failed ? "text-destructive" : step.done || step.active ? "text-foreground" : "text-muted-foreground/40"
                           }`}>
                             {step.label}
                           </span>
                         </div>
                         {i < steps.length - 1 && (
-                          <div className={`mb-4 h-0.5 flex-1 ${
+                          <div className={`sm:mb-4 h-0.5 flex-1 ${
                             step.done ? "bg-green-500" : "bg-border"
                           }`} />
                         )}
                       </div>
                     ))}
                   </div>
+                  {/* Mobile step label */}
+                  <p className="mt-2 sm:hidden text-xs text-center text-muted-foreground">
+                    {statusLabels[r.refund_status] ?? r.refund_status}
+                  </p>
                 </div>
               );
             })}

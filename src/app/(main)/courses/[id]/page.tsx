@@ -277,6 +277,7 @@ export default async function CourseDetailPage({
         <div className="grid gap-10 lg:grid-cols-[1fr_380px]">
 
           {/* ── Sections + Lessons ─────────────────────────────── */}
+          {/* On mobile, sidebar (order-first) renders before content */}
           <div className="space-y-8">
             <div>
               <h2 className="mb-4 text-xl font-bold">Course Content</h2>
@@ -370,7 +371,7 @@ export default async function CourseDetailPage({
           </div>
 
           {/* ── Sidebar ──────────────────────────────────────────── */}
-          <aside className="lg:sticky lg:top-20 lg:self-start">
+          <aside className="order-first lg:order-last lg:sticky lg:top-20 lg:self-start">
             <div className="overflow-hidden rounded-xl border border-border bg-card shadow-sm">
               {/* Thumbnail (mobile only – shown above fold in sidebar) */}
               {course.thumbnail_url && (

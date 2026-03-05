@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { ModeToggle } from "@/components/mode-toggle";
+import { MobileNav } from "@/components/mobile-nav";
 import { createClient } from "@/lib/supabase/server";
 import { ensureProfile } from "@/lib/supabase/ensure-profile";
 
@@ -20,29 +21,21 @@ export async function NavHeader() {
           Flux<span className="text-primary">Code</span>
         </Link>
 
+        {/* Desktop nav */}
         <nav className="hidden items-center gap-6 text-sm font-medium sm:flex absolute left-1/2 -translate-x-1/2">
           <Link href="/" className="text-muted-foreground transition-colors hover:text-foreground">
             Home
           </Link>
-          <Link
-            href="/courses"
-            className="text-muted-foreground transition-colors hover:text-foreground"
-          >
+          <Link href="/courses" className="text-muted-foreground transition-colors hover:text-foreground">
             Courses
           </Link>
           {user && (
-            <Link
-              href="/dashboard"
-              className="text-muted-foreground transition-colors hover:text-foreground"
-            >
+            <Link href="/dashboard" className="text-muted-foreground transition-colors hover:text-foreground">
               Dashboard
             </Link>
           )}
           {user && isAdmin && (
-            <Link
-              href="/admin"
-              className="text-muted-foreground transition-colors hover:text-foreground"
-            >
+            <Link href="/admin" className="text-muted-foreground transition-colors hover:text-foreground">
               Admin
             </Link>
           )}
@@ -50,6 +43,8 @@ export async function NavHeader() {
 
         <div className="flex items-center gap-2">
           <ModeToggle />
+
+          {/* Desktop CTA */}
           {user ? (
             <div className="hidden items-center gap-2 sm:flex">
               {isAdmin && (
@@ -75,6 +70,9 @@ export async function NavHeader() {
               Sign in
             </Link>
           )}
+
+          {/* Mobile hamburger */}
+          <MobileNav isLoggedIn={!!user} isAdmin={!!isAdmin} />
         </div>
       </div>
     </header>
