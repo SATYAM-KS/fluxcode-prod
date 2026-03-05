@@ -88,7 +88,7 @@ export default async function Home() {
             </Link>
           </div>
           <p className="mt-4 text-xs text-muted-foreground">
-            No credit card required &middot; Cancel anytime
+            3 days money-back guarantee
           </p>
         </div>
         {/* decorative blobs */}
