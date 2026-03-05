@@ -121,6 +121,26 @@ export async function generateMetadata({
 
 /* ─── Helpers ───────────────────────────────────────────────────── */
 
+const URL_REGEX = /(https?:\/\/[^\s]+)/g;
+
+function renderDescription(text: string) {
+  return text.split(URL_REGEX).map((part, i) =>
+    URL_REGEX.test(part) ? (
+      <a
+        key={i}
+        href={part}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="break-all text-primary underline underline-offset-2 hover:text-primary/80"
+      >
+        {part}
+      </a>
+    ) : (
+      part
+    )
+  );
+}
+
 function formatDuration(seconds: number): string {
   const m = Math.floor(seconds / 60);
   if (m < 60) return `${m}m`;
@@ -186,7 +206,7 @@ export default async function CourseDetailPage({
 
               {course.description && (
                 <p className="max-w-2xl whitespace-pre-wrap text-base text-muted-foreground sm:text-lg">
-                  {course.description}
+                  {renderDescription(course.description)}
                 </p>
               )}
 
