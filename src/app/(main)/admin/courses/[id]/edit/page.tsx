@@ -22,21 +22,37 @@ export default async function EditCoursePage({
       .single(),
     supabase
       .from("sections")
-      .select("id, title, order_index, lessons(id, title, order_index)")
+      .select(`
+        id, title, order_index,
+        lessons(id, title, order_index, sub_section_id, description, drive_video_url, duration, is_free_preview),
+        sub_sections(id, title, order_index)
+      `)
       .eq("course_id", params.id)
       .order("order_index"),
   ]);
 
   if (!course) notFound();
 
-  const sections = (sectionsRaw ?? []).map((s: any) => ({
-    id: s.id as string,
-    title: s.title as string,
-    order_index: s.order_index as number,
-    lessons: [...((s.lessons as any[]) ?? [])].sort(
-      (a, b) => a.order_index - b.order_index
-    ),
-  }));
+  const sections = (sectionsRaw ?? []).map((s: any) => {
+    const allLessons: any[] = [...((s.lessons as any[]) ?? [])];
+    const subSections: any[] = [...((s.sub_sections as any[]) ?? [])].sort(
+      (a: any, b: any) => a.order_index - b.order_index
+    );
+    return {
+      id: s.id as string,
+      title: s.title as string,
+      order_index: s.order_index as number,
+      lessons: allLessons
+        .filter((l) => !l.sub_section_id)
+        .sort((a, b) => a.order_index - b.order_index),
+      sub_sections: subSections.map((sub) => ({
+        ...sub,
+        lessons: allLessons
+          .filter((l) => l.sub_section_id === sub.id)
+          .sort((a: any, b: any) => a.order_index - b.order_index),
+      })),
+    };
+  });
 
   return (
     <div className="space-y-6">
