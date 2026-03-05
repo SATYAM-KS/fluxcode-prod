@@ -132,16 +132,16 @@ function fmtDuration(seconds: number | null): string {
 
 /* ─── Custom YouTube Player ──────────────────────────────────────── */
 
-const PLAYER_ELEM_ID = "yt-player-iframe-target";
-
 function YouTubePlayer({
   lesson,
   userId,
   onComplete,
+  playerId = "yt-player-iframe-target",
 }: {
   lesson: Lesson | null;
   userId: string;
   onComplete: () => void;
+  playerId?: string;
 }) {
   const playerRef = useRef<any>(null);
   const isReadyRef = useRef(false);   // true only after onReady fires
@@ -221,7 +221,7 @@ function YouTubePlayer({
       }
       isReadyRef.current = false;
 
-      playerRef.current = new window.YT.Player(PLAYER_ELEM_ID, {
+      playerRef.current = new window.YT.Player(playerId, {
         videoId,
         width: "100%",
         height: "100%",
@@ -546,7 +546,7 @@ function YouTubePlayer({
         style={{ cursor: showControls ? "default" : "none" }}
       >
         {/* YouTube iframe */}
-        <div id={PLAYER_ELEM_ID} className="absolute inset-0 h-full w-full" />
+        <div id={playerId} className="absolute inset-0 h-full w-full" />
 
         {/* Transparent overlay — blocks YouTube's native controls / links from cursor */}
         <div
@@ -921,15 +921,74 @@ export function LearningInterface({ course, sections, activeLessonId, userId }: 
   // Mobile tab state: "class" | "lessons"
   const [mobileTab, setMobileTab] = useState<"class" | "lessons">("class");
 
+  /* ── Shared lesson info panel content ── */
+  const lessonInfoContent = (
+    <>
+      {activeLesson ? (
+        <>
+          <h2 className="text-base font-bold leading-snug text-white lg:text-lg">{activeLesson.title}</h2>
+          {activeLesson.duration && (
+            <p className="mt-1 text-xs text-zinc-400">{fmtDuration(activeLesson.duration)}</p>
+          )}
+          {activeLesson.completed ? (
+            <div className="mt-3 flex items-center gap-2 text-sm font-medium text-green-400">
+              <CheckCircle2 className="h-4 w-4" />
+              Completed
+            </div>
+          ) : (
+            <button
+              onClick={handleMarkComplete}
+              className="mt-3 w-full rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary/90 transition-colors lg:mt-4 lg:w-auto lg:py-1.5"
+            >
+              Complete Video
+            </button>
+          )}
+          {activeLesson.description && (
+            <div className="mt-4 border-t border-zinc-800 pt-4">
+              <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-zinc-500">Description</p>
+              <p className="text-sm text-zinc-300 leading-relaxed whitespace-pre-wrap">{activeLesson.description}</p>
+            </div>
+          )}
+        </>
+      ) : (
+        <p className="text-sm text-zinc-500">Select a lesson to begin.</p>
+      )}
+    </>
+  );
+
+  /* ── Shared bottom nav ── */
+  const bottomNav = (isMobile: boolean) => (
+    <div className={cn(
+      "flex shrink-0 items-center justify-center gap-3 px-4",
+      isMobile ? "h-14 border-t border-zinc-800 bg-zinc-900" : "h-12"
+    )}>
+      <button
+        onClick={() => activeLessonIndex > 0 && gotoLesson(allLessons[activeLessonIndex - 1].id)}
+        disabled={activeLessonIndex <= 0}
+        className={cn("flex items-center justify-center rounded-lg border border-zinc-700 text-zinc-400 hover:border-zinc-500 hover:text-white disabled:opacity-30 transition-colors", isMobile ? "h-9 w-9" : "h-8 w-8")}
+      >
+        <ChevronLeft className={isMobile ? "h-5 w-5" : "h-4 w-4"} />
+      </button>
+      <span className="min-w-[100px] rounded-lg border border-zinc-700 px-3 py-1.5 text-center text-sm font-medium text-zinc-300">
+        Lesson {activeLessonIndex + 1}/{totalLessons}
+      </span>
+      <button
+        onClick={() => activeLessonIndex < totalLessons - 1 && gotoLesson(allLessons[activeLessonIndex + 1].id)}
+        disabled={activeLessonIndex >= totalLessons - 1}
+        className={cn("flex items-center justify-center rounded-lg border border-zinc-700 text-zinc-400 hover:border-zinc-500 hover:text-white disabled:opacity-30 transition-colors", isMobile ? "h-9 w-9" : "h-8 w-8")}
+      >
+        <ChevronRight className={isMobile ? "h-5 w-5" : "h-4 w-4"} />
+      </button>
+    </div>
+  );
+
   return (
     <div className="fixed inset-0 flex flex-col bg-zinc-950 text-zinc-100">
 
-      {/* ════════════════════════════════════════════════════════
-          MOBILE LAYOUT  (hidden on lg+)
-      ════════════════════════════════════════════════════════ */}
+      {/* ════════════ MOBILE (< lg) ════════════ */}
       <div className="flex flex-1 flex-col overflow-hidden lg:hidden">
 
-        {/* Mobile top bar */}
+        {/* Top bar */}
         <div className="flex h-11 shrink-0 items-center justify-between border-b border-zinc-800 bg-zinc-900 px-3">
           <button
             onClick={() => router.push(`/courses/${course.id}`)}
@@ -942,14 +1001,14 @@ export function LearningInterface({ course, sections, activeLessonId, userId }: 
           <div className="w-10" />
         </div>
 
-        {/* Video — fixed 16:9 aspect on mobile */}
+        {/* Single video player — 16:9 */}
         <div className="w-full shrink-0 bg-black" style={{ aspectRatio: "16/9" }}>
-          <YouTubePlayer lesson={activeLesson} userId={userId} onComplete={handleMarkComplete} />
+          <YouTubePlayer lesson={activeLesson} userId={userId} onComplete={handleMarkComplete} playerId="yt-player-mobile" />
         </div>
 
-        {/* Progress bar under video */}
+        {/* Progress */}
         <div className="shrink-0 bg-zinc-900 px-4 py-2">
-          <div className="flex items-center justify-between text-[11px] text-zinc-400 mb-1">
+          <div className="mb-1 flex items-center justify-between text-[11px] text-zinc-400">
             <span>{progressPct.toFixed(0)}% Complete</span>
             <span>{completedLessons}/{totalLessons} videos</span>
           </div>
@@ -958,7 +1017,7 @@ export function LearningInterface({ course, sections, activeLessonId, userId }: 
           </div>
         </div>
 
-        {/* Tab switcher */}
+        {/* Tabs */}
         <div className="flex shrink-0 border-b border-zinc-800 bg-zinc-900">
           <button
             onClick={() => setMobileTab("class")}
@@ -977,37 +1036,7 @@ export function LearningInterface({ course, sections, activeLessonId, userId }: 
         {/* Tab content */}
         <div className="flex-1 overflow-y-auto bg-zinc-900">
           {mobileTab === "class" ? (
-            <div className="p-4">
-              {activeLesson ? (
-                <>
-                  <h2 className="text-base font-bold leading-snug text-white">{activeLesson.title}</h2>
-                  {activeLesson.duration && (
-                    <p className="mt-1 text-xs text-zinc-400">{fmtDuration(activeLesson.duration)}</p>
-                  )}
-                  {activeLesson.completed ? (
-                    <div className="mt-3 flex items-center gap-2 text-sm font-medium text-green-400">
-                      <CheckCircle2 className="h-4 w-4" />
-                      Completed
-                    </div>
-                  ) : (
-                    <button
-                      onClick={handleMarkComplete}
-                      className="mt-3 w-full rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary/90 transition-colors"
-                    >
-                      Complete Video
-                    </button>
-                  )}
-                  {activeLesson.description && (
-                    <div className="mt-4 border-t border-zinc-800 pt-4">
-                      <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-zinc-500">Description</p>
-                      <p className="text-sm text-zinc-300 leading-relaxed whitespace-pre-wrap">{activeLesson.description}</p>
-                    </div>
-                  )}
-                </>
-              ) : (
-                <p className="text-sm text-zinc-500">Select a lesson to begin.</p>
-              )}
-            </div>
+            <div className="p-4">{lessonInfoContent}</div>
           ) : (
             <LessonSidebar
               sections={localSections}
@@ -1017,38 +1046,15 @@ export function LearningInterface({ course, sections, activeLessonId, userId }: 
           )}
         </div>
 
-        {/* Mobile bottom nav */}
-        <div className="flex h-14 shrink-0 items-center justify-center gap-3 border-t border-zinc-800 bg-zinc-900 px-4">
-          <button
-            onClick={() => activeLessonIndex > 0 && gotoLesson(allLessons[activeLessonIndex - 1].id)}
-            disabled={activeLessonIndex <= 0}
-            className="flex h-9 w-9 items-center justify-center rounded-lg border border-zinc-700 text-zinc-400 hover:border-zinc-500 hover:text-white disabled:opacity-30 transition-colors"
-          >
-            <ChevronLeft className="h-5 w-5" />
-          </button>
-          <span className="min-w-[110px] rounded-lg border border-zinc-700 px-3 py-1.5 text-center text-sm font-medium text-zinc-300">
-            Lesson {activeLessonIndex + 1}/{totalLessons}
-          </span>
-          <button
-            onClick={() => activeLessonIndex < totalLessons - 1 && gotoLesson(allLessons[activeLessonIndex + 1].id)}
-            disabled={activeLessonIndex >= totalLessons - 1}
-            className="flex h-9 w-9 items-center justify-center rounded-lg border border-zinc-700 text-zinc-400 hover:border-zinc-500 hover:text-white disabled:opacity-30 transition-colors"
-          >
-            <ChevronRight className="h-5 w-5" />
-          </button>
-        </div>
+        {bottomNav(true)}
       </div>
 
-      {/* ════════════════════════════════════════════════════════
-          DESKTOP LAYOUT  (hidden below lg)
-      ════════════════════════════════════════════════════════ */}
+      {/* ════════════ DESKTOP (≥ lg) ════════════ */}
       <div className="hidden lg:flex lg:flex-1 lg:flex-col lg:overflow-hidden">
-        {/* Main padded area */}
         <div className="flex flex-1 gap-2 overflow-hidden p-2 pb-0">
 
-          {/* Col 1: Sidebar panel */}
-          <div className="flex w-60 shrink-0 flex-col rounded-xl border border-zinc-800 bg-zinc-900 overflow-hidden">
-            {/* Go Back header */}
+          {/* Col 1: Sidebar */}
+          <div className="flex w-60 shrink-0 flex-col overflow-hidden rounded-xl border border-zinc-800 bg-zinc-900">
             <div className="flex h-11 shrink-0 items-center border-b border-zinc-800 px-4">
               <button
                 onClick={() => router.push(`/courses/${course.id}`)}
@@ -1058,76 +1064,42 @@ export function LearningInterface({ course, sections, activeLessonId, userId }: 
                 Go Back
               </button>
             </div>
-
-            {/* Progress */}
             <div className="shrink-0 border-b border-zinc-800 px-4 py-3">
               <p className="mb-1 text-[11px] font-semibold text-zinc-400">{progressPct.toFixed(1)}% Complete</p>
               <div className="h-1.5 w-full overflow-hidden rounded-full bg-zinc-700">
                 <div className="h-full rounded-full bg-primary transition-all" style={{ width: `${progressPct}%` }} />
               </div>
-              <div className="mt-2 flex gap-4 text-[11px] text-zinc-500">
-                <span>Video <span className="font-semibold text-zinc-300">{completedLessons}/{totalLessons}</span></span>
+              <div className="mt-2 text-[11px] text-zinc-500">
+                Video <span className="font-semibold text-zinc-300">{completedLessons}/{totalLessons}</span>
               </div>
             </div>
-
-            {/* Lesson list */}
             <div className="flex-1 overflow-y-auto">
               <LessonSidebar sections={localSections} activeLessonId={activeLessonId} onLessonClick={(id) => gotoLesson(id)} />
             </div>
           </div>
 
-          {/* Col 2 + divider + Col 3 — resizable area */}
+          {/* Col 2 + divider + Col 3 */}
           <div ref={rightColRef} className="flex flex-1 gap-0 overflow-hidden rounded-xl">
 
-            {/* Col 2: Class panel */}
+            {/* Col 2: Class info */}
             <div className="flex flex-col overflow-hidden rounded-l-xl border border-zinc-800 bg-zinc-900" style={{ width: `${classPct}%` }}>
               <div className="flex h-11 shrink-0 items-center gap-2 border-b border-zinc-800 px-4">
-                <PlayCircle className="h-4 w-4 text-primary shrink-0" />
-                <span className="text-sm font-semibold truncate">Class</span>
+                <PlayCircle className="h-4 w-4 shrink-0 text-primary" />
+                <span className="truncate text-sm font-semibold">Class</span>
               </div>
-              <div className="flex-1 overflow-y-auto p-5">
-                {activeLesson ? (
-                  <>
-                    <h2 className="text-lg font-bold leading-snug text-white">{activeLesson.title}</h2>
-                    {activeLesson.duration && (
-                      <p className="mt-1 text-xs text-zinc-400">{fmtDuration(activeLesson.duration)}</p>
-                    )}
-                    {activeLesson.completed ? (
-                      <div className="mt-4 flex items-center gap-2 text-sm font-medium text-green-400">
-                        <CheckCircle2 className="h-4 w-4" />
-                        Completed
-                      </div>
-                    ) : (
-                      <button
-                        onClick={handleMarkComplete}
-                        className="mt-4 rounded-md bg-primary px-4 py-1.5 text-sm font-semibold text-primary-foreground hover:bg-primary/90 transition-colors"
-                      >
-                        Complete Video
-                      </button>
-                    )}
-                    {activeLesson.description && (
-                      <div className="mt-5 border-t border-zinc-800 pt-4">
-                        <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-zinc-500">Description</p>
-                        <p className="text-sm text-zinc-300 leading-relaxed whitespace-pre-wrap">{activeLesson.description}</p>
-                      </div>
-                    )}
-                  </>
-                ) : (
-                  <p className="text-sm text-zinc-500">Select a lesson to begin.</p>
-                )}
-              </div>
+              <div className="flex-1 overflow-y-auto p-5">{lessonInfoContent}</div>
             </div>
 
             {/* Draggable divider */}
             <div
               onMouseDown={onDividerMouseDown}
-              className="w-1.5 shrink-0 cursor-col-resize bg-zinc-800 hover:bg-primary/50 active:bg-primary transition-colors"
+              className="w-1.5 shrink-0 cursor-col-resize bg-zinc-800 transition-colors hover:bg-primary/50 active:bg-primary"
             />
 
-            {/* Col 3: Video panel */}
+            {/* Col 3: Video */}
             <div className="flex flex-1 flex-col overflow-hidden rounded-r-xl border border-zinc-800 bg-zinc-900">
               <div className="flex h-11 shrink-0 items-center gap-2 border-b border-zinc-800 px-4">
-                <PlayCircle className="h-4 w-4 text-primary shrink-0" />
+                <PlayCircle className="h-4 w-4 shrink-0 text-primary" />
                 <span className="text-sm font-semibold">Video Lecture</span>
               </div>
               <div className="flex-1 overflow-hidden bg-black">
@@ -1137,26 +1109,7 @@ export function LearningInterface({ course, sections, activeLessonId, userId }: 
           </div>
         </div>
 
-        {/* Desktop bottom nav bar */}
-        <div className="flex h-12 shrink-0 items-center justify-center gap-3 px-4">
-          <button
-            onClick={() => activeLessonIndex > 0 && gotoLesson(allLessons[activeLessonIndex - 1].id)}
-            disabled={activeLessonIndex <= 0}
-            className="flex h-8 w-8 items-center justify-center rounded-lg border border-zinc-700 text-zinc-400 hover:border-zinc-500 hover:text-white disabled:opacity-30 transition-colors"
-          >
-            <ChevronLeft className="h-4 w-4" />
-          </button>
-          <span className="min-w-[90px] rounded-lg border border-zinc-700 px-3 py-1 text-center text-sm font-medium text-zinc-300">
-            Lesson {activeLessonIndex + 1}/{totalLessons}
-          </span>
-          <button
-            onClick={() => activeLessonIndex < totalLessons - 1 && gotoLesson(allLessons[activeLessonIndex + 1].id)}
-            disabled={activeLessonIndex >= totalLessons - 1}
-            className="flex h-8 w-8 items-center justify-center rounded-lg border border-zinc-700 text-zinc-400 hover:border-zinc-500 hover:text-white disabled:opacity-30 transition-colors"
-          >
-            <ChevronRight className="h-4 w-4" />
-          </button>
-        </div>
+        {bottomNav(false)}
       </div>
     </div>
   );
