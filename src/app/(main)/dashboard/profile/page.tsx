@@ -3,6 +3,7 @@ import Image from "next/image";
 import { User, Calendar, Award, BookOpen, CheckCircle2, LogOut } from "lucide-react";
 
 import { createClient } from "@/lib/supabase/server";
+import { formatDateIST } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { SignOutButton } from "@/components/sign-out-button";
 import { ensureProfile } from "@/lib/supabase/ensure-profile";
@@ -47,11 +48,8 @@ export default async function ProfilePage() {
   const displayName = user.user_metadata?.full_name || profile?.email?.split("@")[0] || "User";
   const avatarUrl = user.user_metadata?.avatar_url || null;
   const memberSince = profile.created_at
-    ? new Date(profile.created_at).toLocaleDateString("en-US", {
-        month: "long",
-        year: "numeric",
-      })
-    : "Recently";
+    ? formatDateIST(profile.created_at, { month: "long", year: "numeric" })
+    : "—";
 
   return (
     <main className="mx-auto max-w-4xl px-4 py-10">

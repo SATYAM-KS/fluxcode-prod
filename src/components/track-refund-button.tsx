@@ -12,6 +12,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
+import { formatDateTimeIST } from "@/lib/utils";
 
 type RefundStatus = "requested" | "processed" | "failed" | string | null;
 
@@ -32,16 +33,7 @@ function buildTimeline(
   const isFailed = refundStatus === "failed";
   const isUnderReview = refundStatus === "under_review" || isProcessed;
 
-  const fmt = (d: string | null) =>
-    d
-      ? new Date(d).toLocaleString("en-IN", {
-          day: "2-digit",
-          month: "short",
-          year: "numeric",
-          hour: "2-digit",
-          minute: "2-digit",
-        })
-      : null;
+  const fmt = (d: string | null) => (d ? formatDateTimeIST(d) : null);
 
   return [
     {

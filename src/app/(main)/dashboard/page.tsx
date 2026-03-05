@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { SignOutButton } from "@/components/sign-out-button";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin-client";
+import { formatDateTimeIST } from "@/lib/utils";
 import {
   EnrolledCourseCard,
   EnrolledCourseCardSkeleton,
@@ -253,10 +254,7 @@ export default async function DashboardPage() {
                       )}
                       <p className="mt-0.5 text-xs text-muted-foreground">
                         Requested on{" "}
-                        {new Date(r.refund_requested_at).toLocaleString("en-IN", {
-                          day: "2-digit", month: "short", year: "numeric",
-                          hour: "2-digit", minute: "2-digit",
-                        })}
+                        {formatDateTimeIST(r.refund_requested_at)}
                       </p>
                     </div>
                     <span className={`shrink-0 inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold ${statusColors[r.refund_status] ?? "bg-muted text-muted-foreground"}` }>

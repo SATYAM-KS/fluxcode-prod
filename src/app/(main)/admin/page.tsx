@@ -4,6 +4,7 @@ import type { LucideIcon } from "lucide-react";
 
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin-client";
+import { formatDateIST } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 /* ─── Data fetching ─────────────────────────────────────────────── */
@@ -194,7 +195,7 @@ export default async function AdminDashboardPage() {
                       </div>
                     </div>
                     <time className="shrink-0 text-xs text-muted-foreground">
-                      {new Date(profile.created_at).toLocaleDateString("en-US", {
+                      {formatDateIST(profile.created_at, {
                         month: "short",
                         day: "numeric",
                         year: "numeric",

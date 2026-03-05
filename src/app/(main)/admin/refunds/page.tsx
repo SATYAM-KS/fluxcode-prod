@@ -1,5 +1,6 @@
 import { createAdminClient } from "@/lib/supabase/admin-client";
 import { ApproveRefundButton } from "@/components/admin/approve-refund-button";
+import { formatDateTimeIST } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
@@ -102,10 +103,7 @@ export default async function AdminRefundsPage() {
                   </td>
                   <td className="px-4 py-3 text-muted-foreground">
                     {r.refund_requested_at
-                      ? new Date(r.refund_requested_at).toLocaleString("en-IN", {
-                          day: "2-digit", month: "short", year: "numeric",
-                          hour: "2-digit", minute: "2-digit",
-                        })
+                      ? formatDateTimeIST(r.refund_requested_at)
                       : "—"}
                   </td>
                   <td className="px-4 py-3">

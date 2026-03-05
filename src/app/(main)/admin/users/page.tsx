@@ -2,6 +2,7 @@ import { Users, BookOpen } from "lucide-react";
 
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin-client";
+import { formatDateIST } from "@/lib/utils";
 
 export const metadata = { title: "Users – Admin | FluxCode" };
 
@@ -124,7 +125,7 @@ export default async function AdminUsersPage() {
                       )}
                     </td>
                     <td className="hidden px-4 py-3 text-muted-foreground md:table-cell">
-                      {new Date(user.created_at).toLocaleDateString("en-US", {
+                      {formatDateIST(user.created_at, {
                         month: "short",
                         day: "numeric",
                         year: "numeric",
