@@ -41,9 +41,9 @@ export function RefundRequestButton({
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const eligible = useMemo(() => {
-    if (!purchasedAt) return false;
+    if (!purchasedAt) return true; // no timestamp = old enrollment, treat as eligible
     const p = new Date(purchasedAt);
-    if (Number.isNaN(p.getTime())) return false;
+    if (Number.isNaN(p.getTime())) return true;
     const deadline = p.getTime() + REFUND_WINDOW_HOURS * 60 * 60 * 1000;
     return Date.now() <= deadline;
   }, [purchasedAt]);

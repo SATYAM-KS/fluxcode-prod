@@ -48,17 +48,15 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Refund already requested" }, { status: 400 });
     }
 
-    const purchasedAt = enrollment.purchased_at ? new Date(enrollment.purchased_at) : null;
-    if (!purchasedAt || Number.isNaN(purchasedAt.getTime())) {
-      return NextResponse.json(
-        { error: "Missing purchase timestamp — contact support" },
-        { status: 400 }
-      );
-    }
-
-    const deadline = purchasedAt.getTime() + REFUND_WINDOW_HOURS * 60 * 60 * 1000;
-    if (Date.now() > deadline) {
-      return NextResponse.json({ error: "Refund window expired" }, { status: 400 });
+    // Only enforce 72h window if purchased_at is set (old enrollments get a pass)
+    if (enrollment.purchased_at) {
+      const purchasedAt = new Date(enrollment.purchased_at);
+      if (!Number.isNaN(purchasedAt.getTime())) {
+        const deadline = purchasedAt.getTime() + REFUND_WINDOW_HOURS * 60 * 60 * 1000;
+        if (Date.now() > deadline) {
+          return NextResponse.json({ error: "Refund window expired" }, { status: 400 });
+        }
+      }
     }
 
     const { error: updateError } = await admin
