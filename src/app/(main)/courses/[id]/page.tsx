@@ -89,8 +89,7 @@ async function getCourseData(id: string) {
         .eq("user_id", user.id)
         .eq("course_id", id)
         .maybeSingle();
-      const isRefunded =
-        !!(enrollment as any)?.refunded_at || (enrollment as any)?.refund_status === "processed";
+      const isRefunded = (enrollment as any)?.refund_status === "credited";
       isEnrolled = !!enrollment && !isRefunded;
       enrollmentMeta = enrollment
         ? {

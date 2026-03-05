@@ -53,7 +53,7 @@ async function getEnrolledCoursesWithProgress(userId: string) {
     .from("enrollments")
     .select("course_id, refund_status")
     .eq("user_id", userId)
-    .not("refund_status", "eq", "processed");
+    .not("refund_status", "eq", "credited");
 
   if (!enrollments || enrollments.length === 0) return [];
 
