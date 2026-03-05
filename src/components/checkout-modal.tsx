@@ -173,7 +173,15 @@ export function CheckoutModal({
 
           {/* Coupon section */}
           <div className="space-y-2">
-            <p className="text-xs font-semibold uppercase tracking-wider text-zinc-500">Coupon Code</p>
+            <div className="flex items-center justify-between">
+              <p className="text-xs font-semibold uppercase tracking-wider text-zinc-500">Coupon Code</p>
+              <p className="text-xs text-zinc-400">
+                Use <span
+                  className="cursor-pointer font-mono font-bold text-primary hover:underline"
+                  onClick={() => { setCouponInput("LAUNCH25"); setCouponError(null); setCouponResult(null); }}
+                >LAUNCH25</span> to get a discount
+              </p>
+            </div>
 
             {couponResult?.valid ? (
               <div className="flex items-center gap-3 rounded-lg border border-green-700 bg-green-950/40 px-4 py-2.5">
