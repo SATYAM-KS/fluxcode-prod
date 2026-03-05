@@ -145,11 +145,13 @@ export function RefundRequestButton({
                   }
                   setRequested(true);
                   setOpen(false);
-                  toast.success("Refund request submitted", {
-                    description:
-                      "Your refund request has been received. You will get your refund within 3–5 business days.",
-                    duration: 6000,
-                  });
+                  setTimeout(() => {
+                    toast.success("Refund request submitted! 🎉", {
+                      description:
+                        "Your request has been received. You will get your refund within 3–5 business days.",
+                      duration: 8000,
+                    });
+                  }, 300);
                 } catch {
                   setErrorMsg("Refund failed");
                 }
