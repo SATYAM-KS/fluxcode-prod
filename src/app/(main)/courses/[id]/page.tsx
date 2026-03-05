@@ -27,6 +27,7 @@ type Lesson = {
   title: string;
   duration: number | null;
   order_index: number;
+  is_free_preview: boolean;
 };
 
 type Section = {
@@ -57,7 +58,7 @@ async function getCourseData(id: string) {
       admin.from("courses").select("*").eq("id", id).single(),
       admin
         .from("sections")
-        .select("id, title, order_index, lessons(id, title, duration, order_index)")
+        .select("id, title, order_index, lessons(id, title, duration, order_index, is_free_preview)")
         .eq("course_id", id)
         .order("order_index"),
       supabase.auth.getUser(),
@@ -268,34 +269,48 @@ export default async function CourseDetailPage({
                       {/* Lessons */}
                       {section.lessons.length > 0 && (
                         <ul className="divide-y divide-border">
-                          {section.lessons.map((lesson) => (
-                            <li
-                              key={lesson.id}
-                              className="flex items-center justify-between px-4 py-3 text-sm"
-                            >
-                              <div className="flex items-center gap-3">
-                                {isEnrolled ? (
-                                  <PlayCircle className="h-4 w-4 shrink-0 text-primary" />
-                                ) : (
-                                  <Lock className="h-4 w-4 shrink-0 text-muted-foreground/60" />
+                          {section.lessons.map((lesson) => {
+                            const canWatch = isEnrolled || lesson.is_free_preview;
+                            const inner = (
+                              <>
+                                <div className="flex items-center gap-3">
+                                  {canWatch ? (
+                                    <PlayCircle className="h-4 w-4 shrink-0 text-primary" />
+                                  ) : (
+                                    <Lock className="h-4 w-4 shrink-0 text-muted-foreground/60" />
+                                  )}
+                                  <span className={canWatch ? "text-foreground" : "text-muted-foreground"}>
+                                    {lesson.title}
+                                  </span>
+                                  {lesson.is_free_preview && !isEnrolled && (
+                                    <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary">
+                                      Free Preview
+                                    </span>
+                                  )}
+                                </div>
+                                {lesson.duration != null && lesson.duration > 0 && (
+                                  <span className="ml-4 shrink-0 text-xs text-muted-foreground">
+                                    {formatDuration(lesson.duration)}
+                                  </span>
                                 )}
-                                <span
-                                  className={
-                                    isEnrolled
-                                      ? "text-foreground"
-                                      : "text-muted-foreground"
-                                  }
-                                >
-                                  {lesson.title}
-                                </span>
-                              </div>
-                              {lesson.duration != null && lesson.duration > 0 && (
-                                <span className="ml-4 shrink-0 text-xs text-muted-foreground">
-                                  {formatDuration(lesson.duration)}
-                                </span>
-                              )}
-                            </li>
-                          ))}
+                              </>
+                            );
+                            return (
+                              <li
+                                key={lesson.id}
+                                className="flex items-center justify-between px-4 py-3 text-sm"
+                              >
+                                {canWatch ? (
+                                  <Link
+                                    href={`/learn/${course.id}?lesson=${lesson.id}`}
+                                    className="flex w-full items-center justify-between hover:text-primary"
+                                  >
+                                    {inner}
+                                  </Link>
+                                ) : inner}
+                              </li>
+                            );
+                          })}
                         </ul>
                       )}
                     </div>

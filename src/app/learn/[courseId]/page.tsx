@@ -61,7 +61,19 @@ export default async function LearnCoursePage({
       .maybeSingle();
 
     if (!enrollment) {
-      redirect(`/courses/${courseId}`);
+      // Allow access if the requested lesson is a free preview
+      if (lessonId) {
+        const { data: lesson } = await admin
+          .from("lessons")
+          .select("is_free_preview")
+          .eq("id", lessonId)
+          .single();
+        if (!lesson?.is_free_preview) {
+          redirect(`/courses/${courseId}`);
+        }
+      } else {
+        redirect(`/courses/${courseId}`);
+      }
     }
   }
 
