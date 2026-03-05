@@ -55,12 +55,15 @@ export default async function LearnCoursePage({
   if (!userIsAdmin) {
     const { data: enrollment } = await supabase
       .from("enrollments")
-      .select("id")
+      .select("id, refund_status, refunded_at")
       .eq("user_id", user.id)
       .eq("course_id", courseId)
       .maybeSingle();
 
-    if (!enrollment) {
+    const isRefunded =
+      !!(enrollment as any)?.refunded_at || (enrollment as any)?.refund_status === "processed";
+
+    if (!enrollment || isRefunded) {
       // Allow access if the requested lesson is a free preview
       if (lessonId) {
         const { data: lesson } = await admin

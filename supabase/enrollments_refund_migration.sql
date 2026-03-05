@@ -17,3 +17,12 @@ ALTER TABLE public.enrollments
 
 ALTER TABLE public.enrollments
   ADD COLUMN IF NOT EXISTS refund_status text;
+
+ALTER TABLE public.enrollments
+  ADD COLUMN IF NOT EXISTS refund_reason text;
+
+ALTER TABLE public.enrollments
+  ADD COLUMN IF NOT EXISTS razorpay_refund_id text;
+
+ALTER TABLE public.enrollments
+  ADD COLUMN IF NOT EXISTS refunded_at timestamptz;

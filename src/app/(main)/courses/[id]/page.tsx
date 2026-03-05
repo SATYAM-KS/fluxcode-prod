@@ -70,7 +70,12 @@ async function getCourseData(id: string) {
   const user = userData?.user ?? null;
 
   let isEnrolled = false;
-  let enrollmentMeta: { purchased_at: string | null; refund_requested_at: string | null } | null = null;
+  let enrollmentMeta: {
+    purchased_at: string | null;
+    refund_requested_at: string | null;
+    refund_status: string | null;
+    refunded_at: string | null;
+  } | null = null;
   if (user) {
     // Admins get automatic access to every course
     const adminUser = await isAdmin(user.id);
@@ -79,15 +84,19 @@ async function getCourseData(id: string) {
     } else {
       const { data: enrollment } = await supabase
         .from("enrollments")
-        .select("id, purchased_at, refund_requested_at")
+        .select("id, purchased_at, refund_requested_at, refund_status, refunded_at")
         .eq("user_id", user.id)
         .eq("course_id", id)
         .maybeSingle();
-      isEnrolled = !!enrollment;
+      const isRefunded =
+        !!(enrollment as any)?.refunded_at || (enrollment as any)?.refund_status === "processed";
+      isEnrolled = !!enrollment && !isRefunded;
       enrollmentMeta = enrollment
         ? {
           purchased_at: (enrollment as any).purchased_at ?? null,
           refund_requested_at: (enrollment as any).refund_requested_at ?? null,
+          refund_status: (enrollment as any).refund_status ?? null,
+          refunded_at: (enrollment as any).refunded_at ?? null,
         }
         : null;
     }
@@ -434,6 +443,8 @@ export default async function CourseDetailPage({
                       courseId={course.id}
                       purchasedAt={enrollmentMeta?.purchased_at ?? null}
                       refundRequestedAt={enrollmentMeta?.refund_requested_at ?? null}
+                      refundStatus={enrollmentMeta?.refund_status ?? null}
+                      refundedAt={enrollmentMeta?.refunded_at ?? null}
                     />
                   </div>
                 )}
