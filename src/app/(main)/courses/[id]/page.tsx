@@ -185,7 +185,7 @@ export default async function CourseDetailPage({
               </h1>
 
               {course.description && (
-                <p className="max-w-2xl text-base text-muted-foreground sm:text-lg">
+                <p className="max-w-2xl whitespace-pre-wrap text-base text-muted-foreground sm:text-lg">
                   {course.description}
                 </p>
               )}
