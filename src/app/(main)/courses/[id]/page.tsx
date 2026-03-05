@@ -345,7 +345,7 @@ export default async function CourseDetailPage({
                     </Link>
                   </Button>
                 ) : user ? (
-                  <RazorpayEnrollButton courseId={course.id} courseTitle={course.title} />
+                  <RazorpayEnrollButton courseId={course.id} courseTitle={course.title} coursePrice={course.price ?? 0} />
                 ) : (
                   <Button asChild size="lg" className="w-full">
                     <Link

@@ -6,6 +6,7 @@ import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
+import { CheckoutModal } from "@/components/checkout-modal";
 
 declare global {
   interface Window {
@@ -29,34 +30,56 @@ function loadRazorpayScript(): Promise<boolean> {
 export function RazorpayEnrollButton({
   courseId,
   courseTitle,
+  coursePrice,
 }: {
   courseId: string;
   courseTitle: string;
+  coursePrice: number;
 }) {
-  const [loading, setLoading] = useState(false);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [paying, setPaying] = useState(false);
   const router = useRouter();
 
+  // Called when user clicks "Enroll Now" — for free courses skip modal
   async function onClick() {
-    setLoading(true);
+    if (coursePrice === 0) {
+      setPaying(true);
+      try {
+        const resp = await fetch("/api/create-order", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ courseId }),
+        });
+        const data = await resp.json();
+        if (!resp.ok) { toast.error("Enrollment failed", { description: data?.error }); return; }
+        toast.success("Enrolled successfully!");
+        router.push(`/learn/${courseId}`);
+        router.refresh();
+      } finally {
+        setPaying(false);
+      }
+      return;
+    }
+    // Paid course — open checkout modal
+    setModalOpen(true);
+  }
+
+  // Called from modal after user confirms price breakdown
+  async function onProceed(finalAmount: number, couponCode?: string) {
+    setModalOpen(false);
+    setPaying(true);
+
     try {
       const resp = await fetch("/api/create-order", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ courseId }),
+        body: JSON.stringify({ courseId, finalAmount, couponCode }),
       });
 
       const data = await resp.json();
 
       if (!resp.ok) {
-        toast.error("Unable to start checkout", { description: data?.error });
-        return;
-      }
-
-      // Free course
-      if (data.free) {
-        toast.success("Enrolled successfully");
-        router.push(`/learn/${courseId}`);
-        router.refresh();
+        toast.error("Unable to create order", { description: data?.error });
         return;
       }
 
@@ -73,9 +96,7 @@ export function RazorpayEnrollButton({
         name: "FluxCode",
         description: courseTitle,
         order_id: data.orderId,
-        prefill: {
-          email: data?.user?.email,
-        },
+        prefill: { email: data?.user?.email },
         handler: async function (response: any) {
           try {
             const verifyResp = await fetch("/api/verify-payment", {
@@ -91,9 +112,7 @@ export function RazorpayEnrollButton({
             const verifyData = await verifyResp.json();
 
             if (!verifyResp.ok) {
-              toast.error("Payment verification failed", {
-                description: verifyData?.error,
-              });
+              toast.error("Payment verification failed", { description: verifyData?.error });
               return;
             }
 
@@ -104,9 +123,7 @@ export function RazorpayEnrollButton({
             toast.error("Payment succeeded but verification failed");
           }
         },
-        theme: {
-          color: "#0f172a",
-        },
+        theme: { color: "#0f172a" },
       };
 
       const rzp = new window.Razorpay(options);
@@ -117,14 +134,26 @@ export function RazorpayEnrollButton({
       });
       rzp.open();
     } finally {
-      setLoading(false);
+      setPaying(false);
     }
   }
 
   return (
-    <Button size="lg" className="w-full" onClick={onClick} disabled={loading}>
-      {loading && <Loader2 className="h-4 w-4 animate-spin" />}
-      Enroll Now
-    </Button>
+    <>
+      <Button size="lg" className="w-full" onClick={onClick} disabled={paying}>
+        {paying && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+        Enroll Now
+      </Button>
+
+      <CheckoutModal
+        open={modalOpen}
+        onClose={() => setModalOpen(false)}
+        courseId={courseId}
+        courseTitle={courseTitle}
+        basePrice={coursePrice}
+        onProceed={onProceed}
+      />
+    </>
   );
 }
+

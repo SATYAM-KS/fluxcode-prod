@@ -16,6 +16,8 @@ export async function POST(req: Request) {
 
     const body = await req.json();
     const courseId = body?.courseId as string | undefined;
+    const finalAmount = body?.finalAmount as number | undefined; // in rupees, after discount
+    const couponCode = body?.couponCode as string | undefined;
 
     if (!courseId) {
       return NextResponse.json({ error: "Missing courseId" }, { status: 400 });
@@ -66,7 +68,10 @@ export async function POST(req: Request) {
       key_secret: keySecret,
     });
 
-    const amountInPaise = Math.round(course.price * 100);
+    // Use client-supplied finalAmount (post GST + convenience fee - discount) if provided,
+    // but clamp to at least ₹1 to avoid Razorpay rejecting zero-value orders.
+    const chargeAmount = finalAmount && finalAmount > 0 ? finalAmount : course.price;
+    const amountInPaise = Math.round(chargeAmount * 100);
 
     const order = await razorpay.orders.create({
       amount: amountInPaise,
@@ -75,6 +80,7 @@ export async function POST(req: Request) {
       notes: {
         courseId: course.id,
         userId: user.id,
+        couponCode: couponCode ?? "",
       },
     });
 
