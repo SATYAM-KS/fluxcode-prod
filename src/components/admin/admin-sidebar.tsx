@@ -7,6 +7,7 @@ import {
   BookOpen,
   Users,
   TrendingUp,
+  RotateCcw,
   Settings,
   ArrowLeft,
 } from "lucide-react";
@@ -18,6 +19,7 @@ const NAV_LINKS = [
   { href: "/admin/courses", label: "Courses", icon: BookOpen, exact: false },
   { href: "/admin/users", label: "Users", icon: Users, exact: false },
   { href: "/admin/enrollments", label: "Enrollments", icon: TrendingUp, exact: false },
+  { href: "/admin/refunds", label: "Refunds", icon: RotateCcw, exact: false },
   { href: "/admin/settings", label: "Settings", icon: Settings, exact: false },
 ] as const;
 

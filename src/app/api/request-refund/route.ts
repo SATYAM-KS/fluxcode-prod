@@ -27,9 +27,7 @@ export async function POST(req: Request) {
 
     const { data: enrollment, error: enrollmentError } = await admin
       .from("enrollments")
-      .select(
-        "id, user_id, course_id, purchased_at, refund_requested_at, refund_status, refunded_at, razorpay_payment_id"
-      )
+      .select("id, user_id, purchased_at, refund_requested_at, refund_status, refunded_at")
       .eq("user_id", user.id)
       .eq("course_id", courseId)
       .maybeSingle();
@@ -53,23 +51,17 @@ export async function POST(req: Request) {
     const purchasedAt = enrollment.purchased_at ? new Date(enrollment.purchased_at) : null;
     if (!purchasedAt || Number.isNaN(purchasedAt.getTime())) {
       return NextResponse.json(
-        { error: "Missing purchase timestamp" },
+        { error: "Missing purchase timestamp — contact support" },
         { status: 400 }
       );
     }
 
-    const now = Date.now();
     const deadline = purchasedAt.getTime() + REFUND_WINDOW_HOURS * 60 * 60 * 1000;
-
-    if (now > deadline) {
-      return NextResponse.json(
-        { error: "Refund window expired" },
-        { status: 400 }
-      );
+    if (Date.now() > deadline) {
+      return NextResponse.json({ error: "Refund window expired" }, { status: 400 });
     }
 
-    // Mark request (for audit) + store reason
-    const { error: markError } = await admin
+    const { error: updateError } = await admin
       .from("enrollments")
       .update({
         refund_requested_at: new Date().toISOString(),
@@ -79,83 +71,11 @@ export async function POST(req: Request) {
       .eq("id", enrollment.id)
       .eq("user_id", user.id);
 
-    if (markError) {
-      return NextResponse.json({ error: markError.message }, { status: 400 });
+    if (updateError) {
+      return NextResponse.json({ error: updateError.message }, { status: 400 });
     }
 
-    // Free course (no payment id): mark refunded and revoke access immediately
-    if (!enrollment.razorpay_payment_id) {
-      const { error: updateFreeError } = await admin
-        .from("enrollments")
-        .update({
-          refund_status: "processed",
-          refunded_at: new Date().toISOString(),
-        })
-        .eq("id", enrollment.id)
-        .eq("user_id", user.id);
-
-      if (updateFreeError) {
-        return NextResponse.json({ error: updateFreeError.message }, { status: 400 });
-      }
-
-      return NextResponse.json({ ok: true, refunded: false, revoked: true });
-    }
-
-    const keyId = process.env.RAZORPAY_KEY_ID;
-    const keySecret = process.env.RAZORPAY_KEY_SECRET;
-    if (!keyId || !keySecret) {
-      return NextResponse.json(
-        { error: "Missing Razorpay env vars" },
-        { status: 500 }
-      );
-    }
-
-    const { default: Razorpay } = await import("razorpay");
-    const razorpay = new Razorpay({ key_id: keyId, key_secret: keySecret });
-
-    // Full refund (amount omitted). Razorpay requires a unique receipt sometimes; we'll provide notes.
-    let refund: any;
-    try {
-      refund = await razorpay.payments.refund(enrollment.razorpay_payment_id, {
-        notes: {
-          courseId,
-          userId: user.id,
-          reason: reason ?? "",
-        },
-      });
-    } catch (e: any) {
-      // Mark failed
-      await admin
-        .from("enrollments")
-        .update({ refund_status: "failed" })
-        .eq("id", enrollment.id)
-        .eq("user_id", user.id);
-
-      return NextResponse.json(
-        { error: e?.error?.description ?? e?.message ?? "Refund failed" },
-        { status: 400 }
-      );
-    }
-
-    // Record success and revoke access (keep row for audit)
-    const { error: updatePaidError } = await admin
-      .from("enrollments")
-      .update({
-        refund_status: "processed",
-        razorpay_refund_id: refund?.id ?? null,
-        refunded_at: new Date().toISOString(),
-      })
-      .eq("id", enrollment.id)
-      .eq("user_id", user.id);
-
-    if (updatePaidError) {
-      return NextResponse.json(
-        { error: "Refund processed, but audit update failed" },
-        { status: 500 }
-      );
-    }
-
-    return NextResponse.json({ ok: true, refunded: true, refundId: refund?.id ?? null, revoked: true });
+    return NextResponse.json({ ok: true });
   } catch (e: any) {
     return NextResponse.json(
       { error: e?.message ?? "Server error" },
