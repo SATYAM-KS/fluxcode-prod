@@ -29,6 +29,7 @@ function buildTimeline(
 ): TimelineStep[] {
   const isProcessed = refundStatus === "processed";
   const isFailed = refundStatus === "failed";
+  const isUnderReview = refundStatus === "under_review";
 
   const fmt = (d: string | null) =>
     d
@@ -53,8 +54,10 @@ function buildTimeline(
       description: "Our team is reviewing your request and processing the refund.",
       state: isProcessed || isFailed
         ? "done"
-        : refundRequestedAt
+        : isUnderReview
         ? "active"
+        : refundRequestedAt
+        ? "pending"
         : "pending",
       date: null,
     },

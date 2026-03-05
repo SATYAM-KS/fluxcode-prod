@@ -34,8 +34,16 @@ async function getRefundRequests() {
 
 const STATUS_STYLES: Record<string, string> = {
   requested: "bg-yellow-500/10 text-yellow-600 dark:text-yellow-400 border-yellow-500/30",
+  under_review: "bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/30",
   processed: "bg-green-500/10 text-green-600 dark:text-green-400 border-green-500/30",
   failed: "bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/30",
+};
+
+const STATUS_LABELS: Record<string, string> = {
+  requested: "Requested",
+  under_review: "Under Review",
+  processed: "Processed",
+  failed: "Failed",
 };
 
 export default async function AdminRefundsPage() {
@@ -100,16 +108,19 @@ export default async function AdminRefundsPage() {
                   </td>
                   <td className="px-4 py-3">
                     <span
-                      className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold capitalize ${
+                      className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold ${
                         STATUS_STYLES[r.refund_status] ?? "bg-muted text-muted-foreground"
                       }`}
                     >
-                      {r.refund_status ?? "—"}
+                      {STATUS_LABELS[r.refund_status] ?? (r.refund_status ?? "—")}
                     </span>
                   </td>
                   <td className="px-4 py-3">
-                    {r.refund_status === "requested" && (
-                      <ApproveRefundButton enrollmentId={r.id} />
+                    {r.refund_status !== "processed" && r.refund_status !== "failed" && (
+                      <ApproveRefundButton
+                        enrollmentId={r.id}
+                        initialStatus={r.refund_status}
+                      />
                     )}
                   </td>
                 </tr>

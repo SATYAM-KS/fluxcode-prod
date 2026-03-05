@@ -24,17 +24,25 @@ export async function POST(req: Request) {
 
     const body = await req.json();
     const enrollmentId = body?.enrollmentId as string | undefined;
+    const status = body?.status as string | undefined;
 
     if (!enrollmentId) {
       return NextResponse.json({ error: "Missing enrollmentId" }, { status: 400 });
     }
 
+    const ALLOWED = ["under_review", "processed"];
+    if (!status || !ALLOWED.includes(status)) {
+      return NextResponse.json({ error: "Invalid status" }, { status: 400 });
+    }
+
+    const updatePayload: Record<string, any> = { refund_status: status };
+    if (status === "processed") {
+      updatePayload.refunded_at = new Date().toISOString();
+    }
+
     const { error } = await admin
       .from("enrollments")
-      .update({
-        refund_status: "processed",
-        refunded_at: new Date().toISOString(),
-      })
+      .update(updatePayload)
       .eq("id", enrollmentId);
 
     if (error) {
