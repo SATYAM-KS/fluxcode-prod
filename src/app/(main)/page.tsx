@@ -78,7 +78,7 @@ export default async function Home() {
             </Link>
           </div>
           <p className="mt-4 text-xs text-muted-foreground">
-            All courses are free &middot; 2 enrollments per device per month
+            No money needed &middot; 2 enrollments per device per month
           </p>
         </div>
         {/* decorative blobs */}
