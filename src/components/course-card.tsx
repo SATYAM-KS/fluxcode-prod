@@ -10,9 +10,10 @@ import type { Course } from "@/types";
 interface CourseCardProps {
   course: Course;
   className?: string;
+  isEnrolled?: boolean;
 }
 
-export function CourseCard({ course, className }: CourseCardProps) {
+export function CourseCard({ course, className, isEnrolled }: CourseCardProps) {
   return (
     <Card
       className={cn(
@@ -46,9 +47,15 @@ export function CourseCard({ course, className }: CourseCardProps) {
       <CardContent className="pb-3" />
 
       <CardFooter className="pt-0">
-        <Button asChild className="w-full" size="sm">
-          <Link href={`/courses/${course.id}`}>Enroll Now</Link>
-        </Button>
+        {isEnrolled ? (
+          <Button asChild className="w-full" size="sm" variant="outline">
+            <Link href={`/learn/${course.id}`}>Go to Classroom</Link>
+          </Button>
+        ) : (
+          <Button asChild className="w-full" size="sm">
+            <Link href={`/courses/${course.id}`}>Enroll Now</Link>
+          </Button>
+        )}
       </CardFooter>
     </Card>
   );
