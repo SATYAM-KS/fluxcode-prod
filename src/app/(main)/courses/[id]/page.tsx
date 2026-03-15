@@ -15,8 +15,7 @@ import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin-client";
 import { Button } from "@/components/ui/button";
-import { RazorpayEnrollButton } from "@/components/razorpay-enroll-button";
-import { RefundSection } from "@/components/refund-section";
+import { DirectEnrollButton } from "@/components/direct-enroll-button";
 import { isAdmin } from "@/lib/supabase/get-user-role";
 
 export const dynamic = "force-dynamic";
@@ -28,7 +27,6 @@ type Lesson = {
   title: string;
   duration: number | null;
   order_index: number;
-  is_free_preview: boolean;
 };
 
 type Section = {
@@ -43,7 +41,6 @@ type CourseDetail = {
   title: string;
   description: string | null;
   thumbnail_url: string | null;
-  price: number;
   is_published: boolean;
   created_at: string;
 };
@@ -59,7 +56,7 @@ async function getCourseData(id: string) {
       admin.from("courses").select("*").eq("id", id).single(),
       admin
         .from("sections")
-        .select("id, title, order_index, lessons(id, title, duration, order_index, is_free_preview)")
+        .select("id, title, order_index, lessons(id, title, duration, order_index)")
         .eq("course_id", id)
         .order("order_index"),
       supabase.auth.getUser(),
@@ -70,12 +67,6 @@ async function getCourseData(id: string) {
   const user = userData?.user ?? null;
 
   let isEnrolled = false;
-  let enrollmentMeta: {
-    purchased_at: string | null;
-    refund_requested_at: string | null;
-    refund_status: string | null;
-    refunded_at: string | null;
-  } | null = null;
   if (user) {
     // Admins get automatic access to every course
     const adminUser = await isAdmin(user.id);
@@ -84,20 +75,11 @@ async function getCourseData(id: string) {
     } else {
       const { data: enrollment } = await supabase
         .from("enrollments")
-        .select("id, purchased_at, refund_requested_at, refund_status, refunded_at")
+        .select("id")
         .eq("user_id", user.id)
         .eq("course_id", id)
         .maybeSingle();
-      const isRefunded = (enrollment as any)?.refund_status === "credited";
-      isEnrolled = !!enrollment && !isRefunded;
-      enrollmentMeta = enrollment
-        ? {
-          purchased_at: (enrollment as any).purchased_at ?? null,
-          refund_requested_at: (enrollment as any).refund_requested_at ?? null,
-          refund_status: (enrollment as any).refund_status ?? null,
-          refunded_at: (enrollment as any).refunded_at ?? null,
-        }
-        : null;
+      isEnrolled = !!enrollment;
     }
   }
 
@@ -110,7 +92,7 @@ async function getCourseData(id: string) {
     ),
   }));
 
-  return { course: course as CourseDetail, sections, user, isEnrolled, enrollmentMeta };
+  return { course: course as CourseDetail, sections, user, isEnrolled };
 }
 
 /* ─── Metadata ──────────────────────────────────────────────────── */
@@ -137,26 +119,6 @@ export async function generateMetadata({
 
 /* ─── Helpers ───────────────────────────────────────────────────── */
 
-const URL_REGEX = /(https?:\/\/[^\s]+)/g;
-
-function renderDescription(text: string) {
-  return text.split(URL_REGEX).map((part, i) =>
-    URL_REGEX.test(part) ? (
-      <a
-        key={i}
-        href={part}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="break-all text-primary underline underline-offset-2 hover:text-primary/80"
-      >
-        {part}
-      </a>
-    ) : (
-      part
-    )
-  );
-}
-
 function formatDuration(seconds: number): string {
   const m = Math.floor(seconds / 60);
   if (m < 60) return `${m}m`;
@@ -175,21 +137,13 @@ export default async function CourseDetailPage({
   const data = await getCourseData(params.id);
   if (!data) notFound();
 
-  const { course, sections, user, isEnrolled, enrollmentMeta } = data;
+  const { course, sections, user, isEnrolled } = data;
 
   const totalLessons = sections.reduce((acc, s) => acc + s.lessons.length, 0);
   const totalSeconds = sections.reduce(
     (acc, s) => acc + s.lessons.reduce((la, l) => la + (l.duration ?? 0), 0),
     0
   );
-
-  const formattedPrice =
-    course.price === 0
-      ? "Free"
-      : new Intl.NumberFormat("en-IN", {
-        style: "currency",
-        currency: "INR",
-      }).format(course.price);
 
   const highlights = [
     { label: `${totalLessons} on-demand video lessons` },
@@ -221,8 +175,8 @@ export default async function CourseDetailPage({
               </h1>
 
               {course.description && (
-                <p className="max-w-2xl whitespace-pre-wrap text-base text-muted-foreground sm:text-lg">
-                  {renderDescription(course.description)}
+                <p className="max-w-2xl text-base text-muted-foreground sm:text-lg">
+                  {course.description}
                 </p>
               )}
 
@@ -277,7 +231,6 @@ export default async function CourseDetailPage({
         <div className="grid gap-10 lg:grid-cols-[1fr_380px]">
 
           {/* ── Sections + Lessons ─────────────────────────────── */}
-          {/* On mobile, sidebar (order-first) renders before content */}
           <div className="space-y-8">
             <div>
               <h2 className="mb-4 text-xl font-bold">Course Content</h2>
@@ -306,48 +259,34 @@ export default async function CourseDetailPage({
                       {/* Lessons */}
                       {section.lessons.length > 0 && (
                         <ul className="divide-y divide-border">
-                          {section.lessons.map((lesson) => {
-                            const canWatch = isEnrolled || lesson.is_free_preview;
-                            const inner = (
-                              <>
-                                <div className="flex items-center gap-3">
-                                  {canWatch ? (
-                                    <PlayCircle className="h-4 w-4 shrink-0 text-primary" />
-                                  ) : (
-                                    <Lock className="h-4 w-4 shrink-0 text-muted-foreground/60" />
-                                  )}
-                                  <span className={canWatch ? "text-foreground" : "text-muted-foreground"}>
-                                    {lesson.title}
-                                  </span>
-                                  {lesson.is_free_preview && !isEnrolled && (
-                                    <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary">
-                                      Free Preview
-                                    </span>
-                                  )}
-                                </div>
-                                {lesson.duration != null && lesson.duration > 0 && (
-                                  <span className="ml-4 shrink-0 text-xs text-muted-foreground">
-                                    {formatDuration(lesson.duration)}
-                                  </span>
+                          {section.lessons.map((lesson) => (
+                            <li
+                              key={lesson.id}
+                              className="flex items-center justify-between px-4 py-3 text-sm"
+                            >
+                              <div className="flex items-center gap-3">
+                                {isEnrolled ? (
+                                  <PlayCircle className="h-4 w-4 shrink-0 text-primary" />
+                                ) : (
+                                  <Lock className="h-4 w-4 shrink-0 text-muted-foreground/60" />
                                 )}
-                              </>
-                            );
-                            return (
-                              <li
-                                key={lesson.id}
-                                className="flex items-center justify-between px-4 py-3 text-sm"
-                              >
-                                {canWatch ? (
-                                  <Link
-                                    href={`/learn/${course.id}?lesson=${lesson.id}`}
-                                    className="flex w-full items-center justify-between hover:text-primary"
-                                  >
-                                    {inner}
-                                  </Link>
-                                ) : inner}
-                              </li>
-                            );
-                          })}
+                                <span
+                                  className={
+                                    isEnrolled
+                                      ? "text-foreground"
+                                      : "text-muted-foreground"
+                                  }
+                                >
+                                  {lesson.title}
+                                </span>
+                              </div>
+                              {lesson.duration != null && lesson.duration > 0 && (
+                                <span className="ml-4 shrink-0 text-xs text-muted-foreground">
+                                  {formatDuration(lesson.duration)}
+                                </span>
+                              )}
+                            </li>
+                          ))}
                         </ul>
                       )}
                     </div>
@@ -371,7 +310,7 @@ export default async function CourseDetailPage({
           </div>
 
           {/* ── Sidebar ──────────────────────────────────────────── */}
-          <aside className="order-first lg:order-last lg:sticky lg:top-20 lg:self-start">
+          <aside className="lg:sticky lg:top-20 lg:self-start">
             <div className="overflow-hidden rounded-xl border border-border bg-card shadow-sm">
               {/* Thumbnail (mobile only – shown above fold in sidebar) */}
               {course.thumbnail_url && (
@@ -386,10 +325,11 @@ export default async function CourseDetailPage({
               )}
 
               <div className="p-6">
-                {/* Price — hidden for enrolled users */}
-                {!isEnrolled && (
-                  <div className="mb-4 text-4xl font-extrabold">{formattedPrice}</div>
-                )}
+                {/* Free badge */}
+                <div className="mb-4 inline-flex items-center gap-1.5 rounded-full bg-green-500/10 px-3 py-1 text-sm font-semibold text-green-600 dark:text-green-400">
+                  <span className="h-1.5 w-1.5 rounded-full bg-green-500" />
+                  Free
+                </div>
 
                 {/* CTA */}
                 {isEnrolled ? (
@@ -399,7 +339,7 @@ export default async function CourseDetailPage({
                     </Link>
                   </Button>
                 ) : user ? (
-                  <RazorpayEnrollButton courseId={course.id} courseTitle={course.title} coursePrice={course.price ?? 0} />
+                  <DirectEnrollButton courseId={course.id} />
                 ) : (
                   <Button asChild size="lg" className="w-full">
                     <Link
@@ -408,12 +348,6 @@ export default async function CourseDetailPage({
                       Sign in to Enroll
                     </Link>
                   </Button>
-                )}
-
-                {course.price !== 0 && !isEnrolled && (
-                  <p className="mt-2 text-center text-xs text-muted-foreground">
-                    3 days money-back guarantee
-                  </p>
                 )}
 
                 {/* Highlights */}
@@ -434,18 +368,9 @@ export default async function CourseDetailPage({
 
                 {/* Enrollment status badge */}
                 {isEnrolled && (
-                  <div className="mt-5">
-                    <div className="flex items-center justify-center gap-2 rounded-lg bg-green-500/10 px-3 py-2 text-sm font-medium text-green-600 dark:text-green-400">
-                      <CheckCircle className="h-4 w-4" />
-                      You&apos;re enrolled
-                    </div>
-                    <RefundSection
-                      courseId={course.id}
-                      purchasedAt={enrollmentMeta?.purchased_at ?? null}
-                      refundRequestedAt={enrollmentMeta?.refund_requested_at ?? null}
-                      refundStatus={enrollmentMeta?.refund_status ?? null}
-                      refundedAt={enrollmentMeta?.refunded_at ?? null}
-                    />
+                  <div className="mt-5 flex items-center justify-center gap-2 rounded-lg bg-green-500/10 px-3 py-2 text-sm font-medium text-green-600 dark:text-green-400">
+                    <CheckCircle className="h-4 w-4" />
+                    You&apos;re enrolled
                   </div>
                 )}
               </div>

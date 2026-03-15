@@ -10,17 +10,9 @@ import type { Course } from "@/types";
 interface CourseCardProps {
   course: Course;
   className?: string;
-  isEnrolled?: boolean;
 }
 
-export function CourseCard({ course, className, isEnrolled }: CourseCardProps) {
-  const formattedPrice =
-    course.price === 0
-      ? "Free"
-      : new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR" }).format(
-        course.price
-      );
-
+export function CourseCard({ course, className }: CourseCardProps) {
   return (
     <Card
       className={cn(
@@ -42,18 +34,6 @@ export function CourseCard({ course, className, isEnrolled }: CourseCardProps) {
             <BookOpen className="h-10 w-10 opacity-40" />
           </div>
         )}
-        <div className="absolute right-3 top-3">
-          <span
-            className={cn(
-              "rounded-full px-2.5 py-1 text-xs font-semibold",
-              course.price === 0
-                ? "bg-green-500/90 text-white"
-                : "bg-primary/90 text-primary-foreground"
-            )}
-          >
-            {formattedPrice}
-          </span>
-        </div>
       </div>
 
       <CardHeader className="flex-1 pb-2">
@@ -66,15 +46,9 @@ export function CourseCard({ course, className, isEnrolled }: CourseCardProps) {
       <CardContent className="pb-3" />
 
       <CardFooter className="pt-0">
-        {isEnrolled ? (
-          <Button asChild className="w-full" size="sm" variant="outline">
-            <Link href={`/learn/${course.id}`}>Go to Classroom</Link>
-          </Button>
-        ) : (
-          <Button asChild className="w-full" size="sm">
-            <Link href={`/courses/${course.id}`}>Enroll Now</Link>
-          </Button>
-        )}
+        <Button asChild className="w-full" size="sm">
+          <Link href={`/courses/${course.id}`}>Enroll Now</Link>
+        </Button>
       </CardFooter>
     </Card>
   );

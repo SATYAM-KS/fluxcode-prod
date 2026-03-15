@@ -27,7 +27,7 @@ const features = [
   },
 ];
 
-async function getPageData(): Promise<{ courses: Course[]; user: User | null; enrolledIds: Set<string> }> {
+async function getPageData(): Promise<{ courses: Course[]; user: User | null }> {
   const supabase = createClient();
   const [{ data: coursesData }, { data: { user } }] = await Promise.all([
     supabase
@@ -38,22 +38,11 @@ async function getPageData(): Promise<{ courses: Course[]; user: User | null; en
       .limit(3),
     supabase.auth.getUser(),
   ]);
-
-  let enrolledIds = new Set<string>();
-  if (user) {
-    const { data: enrollments } = await supabase
-      .from("enrollments")
-      .select("course_id")
-      .eq("user_id", user.id)
-      .or("refund_status.is.null,refund_status.neq.credited");
-    enrolledIds = new Set((enrollments ?? []).map((e: any) => e.course_id));
-  }
-
-  return { courses: coursesData ?? [], user, enrolledIds };
+  return { courses: coursesData ?? [], user };
 }
 
 export default async function Home() {
-  const { courses: featuredCourses, user, enrolledIds } = await getPageData();
+  const { courses: featuredCourses, user } = await getPageData();
 
   return (
     <>
@@ -89,7 +78,7 @@ export default async function Home() {
             </Link>
           </div>
           <p className="mt-4 text-xs text-muted-foreground">
-            3 days money-back guarantee
+            All courses are free &middot; 2 enrollments per device per month
           </p>
         </div>
         {/* decorative blobs */}
@@ -146,7 +135,7 @@ export default async function Home() {
           {featuredCourses.length > 0 ? (
             <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
               {featuredCourses.map((course) => (
-                <CourseCard key={course.id} course={course} isEnrolled={enrolledIds.has(course.id)} />
+                <CourseCard key={course.id} course={course} />
               ))}
             </div>
           ) : (
